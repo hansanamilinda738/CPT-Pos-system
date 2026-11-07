@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ConnectPro Technologies</title>
+<style>
+:root{--bg:#f2f5fa;--card:#fff;--tx:#0e1a33;--mu:#5d6b85;--nv:#0b1f4d;--bl:#2563eb;--bd:#d9e1ee;--rd:#c62828;--gn:#15803d}
+@media(prefers-color-scheme:dark){:root{--bg:#09112a;--card:#101b3a;--tx:#e6ecf8;--mu:#93a3c0;--nv:#050b1d;--bd:#223360}}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,Segoe UI,sans-serif;background:var(--bg);color:var(--tx)}
+button,input,select,textarea{font:inherit;color:inherit}
+.hide{display:none!important}
+#login{min-height:100vh;display:grid;place-items:center;padding:20px}
+#login form{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:32px;width:100%;max-width:380px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:20px;margin:0}
+.mu{color:var(--mu)}
+label{display:block;font-size:13px;color:var(--mu);margin:12px 0 4px}
+input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--bd);border-radius:6px;background:var(--card)}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--bl);outline-offset:1px}
+.btn{background:var(--bl);color:#fff;border:0;border-radius:6px;padding:9px 16px;cursor:pointer;font-weight:600}
+.btn.g{background:transparent;color:var(--tx);border:1px solid var(--bd)}.btn.d{background:var(--rd)}
+.btn.s{padding:4px 10px;font-size:13px}
+#app{display:flex;min-height:100vh}
+aside{width:220px;background:var(--nv);color:#fff;padding:20px 12px;display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+aside b{padding:0 10px 16px;font-size:16px}
+aside button{background:none;border:0;color:#b9c6e6;text-align:left;padding:9px 10px;border-radius:6px;cursor:pointer}
+aside button.on,aside button:hover{background:rgba(255,255,255,.12);color:#fff}
+aside .sp{flex:1}
+main{flex:1;padding:24px;min-width:0}
+.bar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}.bar input{max-width:260px;margin-left:auto}
+.tw{background:var(--card);border:1px solid var(--bd);border-radius:8px;overflow-x:auto}
+table{width:100%;border-collapse:collapse}th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--bd);white-space:nowrap}
+th{font-size:13px;color:var(--mu);font-weight:600}tr:last-child td{border:0}
+td.a{text-align:right}
+.pill{background:var(--bd);border-radius:20px;padding:2px 10px;font-size:12px}
+.pill.Paid{background:#d1fae5;color:#065f46}.pill.Overdue{background:#fee2e2;color:#991b1b}.pill.Partial{background:#fef3c7;color:#92400e}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.stat{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:16px}
+.stat div{font-size:24px;font-weight:700;margin-top:4px}
+.empty{padding:36px;text-align:center;color:var(--mu)}
+dialog{border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx);width:min(520px,94vw);padding:22px;max-height:90vh}
+dialog::backdrop{background:rgba(5,11,29,.6)}
+.foot{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+#toast{position:fixed;bottom:20px;right:20px;background:var(--nv);color:#fff;padding:10px 16px;border-radius:6px;z-index:9}
+.err{color:var(--rd);font-size:13px;margin-top:10px;min-height:18px}
+@media(max-width:720px){#app{flex-direction:column}aside{width:100%;flex-direction:row;overflow-x:auto;padding:8px}aside b,.sp{display:none}main{padding:14px}}
+</style>
+</head>
+<body>
+
+<section id="login">
+  <form id="lf">
+    <h1>ConnectPro Technologies</h1>
+    <div class="mu">Sign in to continue</div>
+    <label for="em">Username</label><input id="em" type="text" required autocomplete="username" autocapitalize="none" spellcheck="false">
+    <label for="pw">Password</label><input id="pw" type="password" required autocomplete="current-password">
+    <div class="err" id="le"></div>
+    <button class="btn" style="width:100%;margin-top:6px">Sign in</button>
+  </form>
+</section>
+
+<div id="app" class="hide">
+  <aside id="nav"></aside>
+  <main id="main"></main>
+</div>
+
+<dialog id="dlg"><form id="df" method="dialog"></form></dialog>
+<div id="toast" class="hide"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+/* 1. PUT YOUR SUPABASE VALUES HERE (Project Settings > API) */
+const SB_URL = 'YOUR_SUPABASE_URL';
+const SB_KEY = 'YOUR_SUPABASE_ANON_KEY';
+
+const sb = supabase.createClient(SB_URL, SB_KEY);
+const LOGIN_DOMAIN = '@connectpro.app'; // usernames become username@connectpro.app
+const loginEmail = u => { u = u.trim().toLowerCase(); return u.includes('@') ? u : u + LOGIN_DOMAIN; };
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = n => 'LKR ' + Number(n || 0).toLocaleString('en-LK', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const S = {view: 'dashboard', q: '', cust: [], rows: [],
+  statuses: ['Received','Inspection','Quotation','Approved','Assigned','In Progress','Completed','Invoiced','Paid']};
+
+function toast(t) { const e = $('#toast'); e.textContent = t; e.classList.remove('hide'); setTimeout(() => e.classList.add('hide'), 2600); }
+const cname = id => (S.cust.find(c => c.id === id) || {}).name || '';
+const pad = (p, n) => p + String(n).padStart(4, '0');
+function invStatus(r) {
+  if (+r.paid >= +r.amount && +r.amount > 0) return 'Paid';
+  if (+r.paid > 0) return 'Partial';
+  if (r.due_date && r.due_date < new Date().toISOString().slice(0, 10)) return 'Overdue';
+  return 'Unpaid';
+}
+
+/* Field: [key, label, type, required]  types: text, tel, email, number, date, textarea, cust, status, select:A,B */
+const M = {
+  customers: {label: 'Customers', one: 'customer',
+    cols: [['name','Name'],['phone','Phone'],['email','Email'],['address','Address']],
+    f: [['name','Name','text',1],['phone','Phone','tel'],['email','Email','email'],['address','Address','textarea'],['notes','Notes','textarea']]},
+  jobs: {label: 'Jobs', one: 'job',
+    cols: [['job_no','Job',r => pad('J-', r.job_no)],['title','Title'],['customer_id','Customer',r => cname(r.customer_id)],
+      ['status','Status',r => `<span class="pill">${esc(r.status)}</span>`],['target_date','Target'],['value','Value',r => money(r.value),1]],
+    f: [['customer_id','Customer','cust'],['title','Job title','text',1],['description','Description','textarea'],
+      ['status','Status','status'],['priority','Priority','select:Low,Normal,High,Urgent'],
+      ['received_date','Received date','date'],['target_date','Target date','date'],
+      ['value','Job value (LKR)','number'],['cost','Total cost (LKR)','number'],['notes','Internal notes','textarea']]},
+  invoices: {label: 'Invoices', one: 'invoice',
+    cols: [['invoice_no','Invoice',r => pad('INV-', r.invoice_no)],['customer_id','Customer',r => cname(r.customer_id)],
+      ['issue_date','Issued'],['due_date','Due'],['amount','Invoice value',r => money(r.amount),1],
+      ['paid','Received',r => money(r.paid),1],['s','Status',r => {const s = invStatus(r); return `<span class="pill ${s}">${s}</span>`}]],
+    f: [['customer_id','Customer','cust'],['issue_date','Issue date','date'],['due_date','Due date','date'],
+      ['amount','Invoice value (LKR)','number'],['paid','Amount received (LKR)','number'],['notes','Notes','textarea']]},
+  settings: {label: 'Settings'}
+};
+
+/* ---------- auth ---------- */
+$('#lf').onsubmit = async e => {
+  e.preventDefault(); $('#le').textContent = '';
+  const {error} = await sb.auth.signInWithPassword({email: loginEmail($('#em').value), password: $('#pw').value});
+  if (error) $('#le').textContent = 'Sign-in failed. Check your username and password.';
+};
+sb.auth.onAuthStateChange((_, session) => { session ? enter() : leave(); });
+
+async function enter() {
+  const {data} = await sb.from('app_users').select('id').limit(1);
+  if (!data || !data.length) {
+    await sb.auth.signOut();
+    $('#le').textContent = 'This account is not approved for this system.';
+    return;
+  }
+  const st = await sb.from('app_settings').select('value').eq('key', 'job_statuses').maybeSingle();
+  if (st.data && Array.isArray(st.data.value)) S.statuses = st.data.value;
+  await loadCust();
+  $('#login').classList.add('hide'); $('#app').classList.remove('hide');
+  nav(); go('dashboard');
+}
+function leave() { $('#app').classList.add('hide'); $('#login').classList.remove('hide'); }
+async function loadCust() {
+  const {data} = await sb.from('customers').select('id,name').is('deleted_at', null).order('name');
+  S.cust = data || [];
+}
+
+/* ---------- navigation ---------- */
+function nav() {
+  const items = [['dashboard','Dashboard'],['customers','Customers'],['jobs','Jobs'],['invoices','Invoices'],['settings','Settings']];
+  $('#nav').innerHTML = '<b>ConnectPro</b>' + items.map(([k, l]) => `<button data-k="${k}" class="${S.view === k ? 'on' : ''}">${l}</button>`).join('')
+    + '<span class="sp"></span><button id="so">Sign out</button>';
+  document.querySelectorAll('#nav [data-k]').forEach(b => b.onclick = () => go(b.dataset.k));
+  $('#so').onclick = () => sb.auth.signOut();
+}
+function go(v) { S.view = v; S.q = ''; nav(); v === 'dashboard' ? dash() : v === 'settings' ? settings() : list(); }
+
+/* ---------- dashboard ---------- */
+async function dash() {
+  $('#main').innerHTML = '<h2>Dashboard</h2><p class="mu">Loading…</p>';
+  const [j, i] = await Promise.all([
+    sb.from('jobs').select('status,value,cost').is('deleted_at', null),
+    sb.from('invoices').select('amount,paid,due_date').is('deleted_at', null)]);
+  const jobs = j.data || [], inv = i.data || [];
+  const done = ['Completed','Invoiced','Paid'];
+  const open = jobs.filter(x => !done.includes(x.status)).length;
+  const billed = inv.reduce((a, x) => a + +x.amount, 0), got = inv.reduce((a, x) => a + +x.paid, 0);
+  const cost = jobs.reduce((a, x) => a + +x.cost, 0);
+  const byStatus = S.statuses.map(s => `<tr><td>${esc(s)}</td><td class="a">${jobs.filter(x => x.status === s).length}</td></tr>`).join('');
+  $('#main').innerHTML = `<h2 style="margin-bottom:16px">Dashboard</h2><div class="stats">
+    <div class="stat"><span class="mu">Open jobs</span><div>${open}</div></div>
+    <div class="stat"><span class="mu">Total invoiced</span><div>${money(billed)}</div></div>
+    <div class="stat"><span class="mu">Money received</span><div>${money(got)}</div></div>
+    <div class="stat"><span class="mu">Outstanding</span><div>${money(billed - got)}</div></div>
+    <div class="stat"><span class="mu">Job costs recorded</span><div>${money(cost)}</div></div></div>
+    <h2 style="margin:24px 0 10px;font-size:16px">Jobs by status</h2>
+    <div class="tw"><table>${byStatus}</table></div>`;
+}
+
+/* ---------- list view ---------- */
+async function list() {
+  const m = M[S.view];
+  $('#main').innerHTML = `<div class="bar"><h2>${m.label}</h2><button class="btn" id="add">Add ${m.one}</button><input id="q" placeholder="Search ${m.label.toLowerCase()}" aria-label="Search"></div><div class="tw" id="tb"><p class="empty">Loading…</p></div>`;
+  $('#add').onclick = () => form();
+  $('#q').oninput = e => { S.q = e.target.value.toLowerCase(); draw(); };
+  const {data, error} = await sb.from(S.view).select('*').is('deleted_at', null).order('created_at', {ascending: false});
+  if (error) { $('#tb').innerHTML = `<p class="empty">Could not load data: ${esc(error.message)}</p>`; return; }
+  S.rows = data; draw();
+}
+function draw() {
+  const m = M[S.view];
+  const rows = S.rows.filter(r => !S.q || Object.values(r).join(' ').toLowerCase().includes(S.q) || cname(r.customer_id).toLowerCase().includes(S.q));
+  if (!rows.length) { $('#tb').innerHTML = `<p class="empty">${S.rows.length ? 'No matches.' : 'No ' + m.label.toLowerCase() + ' yet. Use “Add ' + m.one + '” to create the first one.'}</p>`; return; }
+  $('#tb').innerHTML = '<table><thead><tr>' + m.cols.map(c => `<th${c[3] ? ' class="a"' : ''}>${c[1]}</th>`).join('') + '<th></th></tr></thead><tbody>'
+    + rows.map(r => '<tr>' + m.cols.map(c => `<td${c[3] ? ' class="a"' : ''}>${c[2] ? c[2](r) : esc(r[c[0]])}</td>`).join('')
+      + `<td class="a"><button class="btn g s" data-e="${r.id}">Edit</button> <button class="btn g s" data-d="${r.id}">Delete</button></td></tr>`).join('') + '</tbody></table>';
+  document.querySelectorAll('[data-e]').forEach(b => b.onclick = () => form(S.rows.find(r => r.id === b.dataset.e)));
+  document.querySelectorAll('[data-d]').forEach(b => b.onclick = () => del(b.dataset.d));
+}
+
+/* ---------- add / edit ---------- */
+function input(f, v) {
+  const [k, l, t, req] = f, val = v ?? '', r = req ? ' required' : '';
+  let h;
+  if (t === 'textarea') h = `<textarea name="${k}" rows="3">${esc(val)}</textarea>`;
+  else if (t === 'cust') h = `<select name="${k}"><option value="">None</option>${S.cust.map(c => `<option value="${c.id}"${c.id === val ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}</select>`;
+  else if (t === 'status' || t.startsWith('select:')) {
+    const o = t === 'status' ? S.statuses : t.slice(7).split(',');
+    h = `<select name="${k}">${o.map(x => `<option${x === val ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
+  } else h = `<input name="${k}" type="${t}"${t === 'number' ? ' step="0.01" min="0"' : ''} value="${esc(val)}"${r}>`;
+  return `<label for="">${l}${req ? ' *' : ''}</label>${h}`;
+}
+function form(row) {
+  const m = M[S.view];
+  $('#df').innerHTML = `<h2>${row ? 'Edit' : 'Add'} ${m.one}</h2>` + m.f.map(f => input(f, row ? row[f[0]] : (f[2] === 'status' ? S.statuses[0] : f[2] === 'select:Low,Normal,High,Urgent' ? 'Normal' : ''))).join('')
+    + '<div class="foot"><button type="button" class="btn g" id="cx">Cancel</button><button class="btn">Save ' + m.one + '</button></div>';
+  $('#cx').onclick = () => $('#dlg').close();
+  $('#df').onsubmit = async e => {
+    e.preventDefault();
+    const fd = new FormData($('#df')), o = {};
+    m.f.forEach(([k,, t]) => { let v = fd.get(k); o[k] = v === '' || v === null ? null : t === 'number' ? +v : v; });
+    if (S.view !== 'customers') m.f.forEach(([k,, t]) => { if (t === 'number' && o[k] === null) o[k] = 0; });
+    const q = row ? sb.from(S.view).update(o).eq('id', row.id) : sb.from(S.view).insert(o);
+    const {error} = await q;
+    if (error) return toast('Save failed: ' + error.message);
+    $('#dlg').close(); toast(row ? 'Saved' : 'Created');
+    if (S.view === 'customers') await loadCust();
+    list();
+  };
+  $('#dlg').showModal();
+}
+async function del(id) {
+  if (!confirm('Delete this ' + M[S.view].one + '? It will be moved to the recycle bin and can be restored from the database.')) return;
+  const {error} = await sb.from(S.view).update({deleted_at: new Date().toISOString()}).eq('id', id);
+  if (error) return toast('Delete failed: ' + error.message);
+  toast('Deleted'); if (S.view === 'customers') await loadCust(); list();
+}
+
+/* ---------- settings ---------- */
+function settings() {
+  $('#main').innerHTML = `<h2 style="margin-bottom:6px">Settings</h2><p class="mu">Currency: LKR. Time zone: Asia/Colombo.</p>
+    <div class="stat" style="max-width:520px"><b>Job statuses</b><p class="mu" style="margin:4px 0 0">One status per line, in workflow order. Add, rename or remove any of them.</p>
+    <textarea id="ss" rows="10">${esc(S.statuses.join('\n'))}</textarea>
+    <div class="foot"><button class="btn" id="sv">Save statuses</button></div></div>`;
+  $('#sv').onclick = async () => {
+    const v = $('#ss').value.split('\n').map(x => x.trim()).filter(Boolean);
+    if (!v.length) return toast('Add at least one status');
+    const {error} = await sb.from('app_settings').upsert({key: 'job_statuses', value: v, updated_at: new Date().toISOString()});
+    if (error) return toast('Save failed: ' + error.message);
+    S.statuses = v; toast('Statuses saved');
+  };
+}
+</script>
+</body>
+</html>
