@@ -67,11 +67,11 @@ dialog::backdrop{background:rgba(5,11,29,.6)}
 <dialog id="dlg"><form id="df" method="dialog"></form></dialog>
 <div id="toast" class="hide"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
 <script>
 /* 1. PUT YOUR SUPABASE VALUES HERE (Project Settings > API) */
-const SB_URL = 'YOUR_SUPABASE_URL';
-const SB_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SB_URL = 'https://thpvixtcahnbhjwowflx.supabase.co';
+const SB_KEY = 'sb_publishable_OKVV2xVJ6617aEmHT6NLdQ_EWQHXxkP';
 
 const sb = supabase.createClient(SB_URL, SB_KEY);
 const LOGIN_DOMAIN = '@connectpro.app'; // usernames become username@connectpro.app
@@ -119,10 +119,13 @@ $('#lf').onsubmit = async e => {
   const {error} = await sb.auth.signInWithPassword({email: loginEmail($('#em').value), password: $('#pw').value});
   if (error) $('#le').textContent = 'Sign-in failed. Check your username and password.';
 };
-sb.auth.onAuthStateChange((_, session) => { session ? enter() : leave(); });
+let entered = false;
+sb.auth.onAuthStateChange((_, session) => { setTimeout(() => { session ? enter() : leave(); }, 0); });
 
 async function enter() {
-  const {data} = await sb.from('app_users').select('id').limit(1);
+  if (entered) return;
+  const {data, error} = await sb.from('app_users').select('id').limit(1);
+  if (error) { $('#le').textContent = 'Database error: ' + error.message; return; }
   if (!data || !data.length) {
     await sb.auth.signOut();
     $('#le').textContent = 'This account is not approved for this system.';
@@ -131,10 +134,11 @@ async function enter() {
   const st = await sb.from('app_settings').select('value').eq('key', 'job_statuses').maybeSingle();
   if (st.data && Array.isArray(st.data.value)) S.statuses = st.data.value;
   await loadCust();
+  entered = true;
   $('#login').classList.add('hide'); $('#app').classList.remove('hide');
   nav(); go('dashboard');
 }
-function leave() { $('#app').classList.add('hide'); $('#login').classList.remove('hide'); }
+function leave() { entered = false; $('#app').classList.add('hide'); $('#login').classList.remove('hide'); }
 async function loadCust() {
   const {data} = await sb.from('customers').select('id,name').is('deleted_at', null).order('name');
   S.cust = data || [];
