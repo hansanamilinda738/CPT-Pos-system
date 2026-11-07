@@ -4,64 +4,111 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ConnectPro Technologies</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
 <style>
-:root{--bg:#f2f5fa;--card:#fff;--tx:#0e1a33;--mu:#5d6b85;--nv:#0b1f4d;--bl:#2563eb;--bd:#d9e1ee;--rd:#c62828;--gn:#15803d}
-@media(prefers-color-scheme:dark){:root{--bg:#09112a;--card:#101b3a;--tx:#e6ecf8;--mu:#93a3c0;--nv:#050b1d;--bd:#223360}}
-*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,Segoe UI,sans-serif;background:var(--bg);color:var(--tx)}
+:root{--bg:#f3f6fc;--card:#fff;--tx:#0b1a38;--mu:#64748b;--bd:#e2e8f4;--nv:#0a1b45;--bl:#2563eb;--bl2:#0ea5e9;--rd:#dc2626;--in:#f8fafd;--sh:0 1px 2px rgba(10,27,69,.05),0 10px 30px rgba(10,27,69,.06)}
+:root[data-theme=dark]{--bg:#070f26;--card:#0e1a3a;--tx:#e8eefc;--mu:#8fa0c4;--bd:#1f2f5c;--nv:#050b1f;--in:#0a1530;--sh:0 10px 30px rgba(0,0,0,.35)}
+*{box-sizing:border-box}
+body{margin:0;font:14.5px/1.5 'Plus Jakarta Sans',system-ui,Segoe UI,sans-serif;background:var(--bg);color:var(--tx)}
 button,input,select,textarea{font:inherit;color:inherit}
-.hide{display:none!important}
-#login{min-height:100vh;display:grid;place-items:center;padding:20px}
-#login form{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:32px;width:100%;max-width:380px}
-h1{font-size:22px;margin:0 0 4px}h2{font-size:20px;margin:0}
-.mu{color:var(--mu)}
-label{display:block;font-size:13px;color:var(--mu);margin:12px 0 4px}
-input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--bd);border-radius:6px;background:var(--card)}
+.hide{display:none!important}.mu{color:var(--mu)}
+h1{font-size:26px;font-weight:800;margin:0;letter-spacing:-.02em}h2{font-size:16px;font-weight:700;margin:0}
+svg{flex-shrink:0}
+input,select,textarea{width:100%;padding:9px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--in)}
 input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--bl);outline-offset:1px}
-.btn{background:var(--bl);color:#fff;border:0;border-radius:6px;padding:9px 16px;cursor:pointer;font-weight:600}
-.btn.g{background:transparent;color:var(--tx);border:1px solid var(--bd)}.btn.d{background:var(--rd)}
-.btn.s{padding:4px 10px;font-size:13px}
+label{display:block;font-size:12.5px;font-weight:600;color:var(--mu);margin-bottom:4px}
+.btn{display:inline-flex;align-items:center;gap:7px;background:linear-gradient(135deg,var(--bl),#1d4ed8);color:#fff;border:0;border-radius:10px;padding:9px 16px;cursor:pointer;font-weight:600;box-shadow:0 4px 14px rgba(37,99,235,.3)}
+.btn.g{background:var(--card);color:var(--tx);border:1px solid var(--bd);box-shadow:none}
+.btn.s{padding:5px 11px;font-size:12.5px;border-radius:8px}
+.ib{width:38px;height:38px;border-radius:10px;border:1px solid var(--bd);background:var(--card);cursor:pointer;display:grid;place-items:center}
+/* login */
+#login{min-height:100vh;display:grid;grid-template-columns:1.1fr 1fr}
+.hero{background:radial-gradient(circle at 20% 15%,rgba(14,165,233,.35),transparent 45%),radial-gradient(circle at 85% 85%,rgba(37,99,235,.5),transparent 50%),#0a1b45;color:#fff;padding:56px;display:flex;flex-direction:column;justify-content:space-between}
+.hero h1{font-size:40px;line-height:1.1;max-width:440px}.hero p{color:#b6c5ea;max-width:380px}
+.logo{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--bl),var(--bl2));display:grid;place-items:center;font-weight:800;color:#fff}
+.lw{display:grid;place-items:center;padding:24px}
+#lf{width:100%;max-width:360px}#lf .fld{margin-top:16px}
+.err{color:var(--rd);font-size:13px;min-height:20px;margin-top:10px}
+/* shell */
 #app{display:flex;min-height:100vh}
-aside{width:220px;background:var(--nv);color:#fff;padding:20px 12px;display:flex;flex-direction:column;gap:4px;flex-shrink:0}
-aside b{padding:0 10px 16px;font-size:16px}
-aside button{background:none;border:0;color:#b9c6e6;text-align:left;padding:9px 10px;border-radius:6px;cursor:pointer}
-aside button.on,aside button:hover{background:rgba(255,255,255,.12);color:#fff}
-aside .sp{flex:1}
-main{flex:1;padding:24px;min-width:0}
-.bar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}.bar input{max-width:260px;margin-left:auto}
-.tw{background:var(--card);border:1px solid var(--bd);border-radius:8px;overflow-x:auto}
-table{width:100%;border-collapse:collapse}th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--bd);white-space:nowrap}
-th{font-size:13px;color:var(--mu);font-weight:600}tr:last-child td{border:0}
-td.a{text-align:right}
-.pill{background:var(--bd);border-radius:20px;padding:2px 10px;font-size:12px}
-.pill.Paid{background:#d1fae5;color:#065f46}.pill.Overdue{background:#fee2e2;color:#991b1b}.pill.Partial{background:#fef3c7;color:#92400e}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
-.stat{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:16px}
-.stat div{font-size:24px;font-weight:700;margin-top:4px}
-.empty{padding:36px;text-align:center;color:var(--mu)}
-dialog{border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx);width:min(520px,94vw);padding:22px;max-height:90vh}
-dialog::backdrop{background:rgba(5,11,29,.6)}
-.foot{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
-#toast{position:fixed;bottom:20px;right:20px;background:var(--nv);color:#fff;padding:10px 16px;border-radius:6px;z-index:9}
-.err{color:var(--rd);font-size:13px;margin-top:10px;min-height:18px}
-@media(max-width:720px){#app{flex-direction:column}aside{width:100%;flex-direction:row;overflow-x:auto;padding:8px}aside b,.sp{display:none}main{padding:14px}}
+aside{width:244px;background:linear-gradient(180deg,#0a1b45,#0b2a6b);color:#fff;padding:22px 14px;display:flex;flex-direction:column;gap:4px;flex-shrink:0;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px 22px;font-weight:800;font-size:16px}
+aside button{display:flex;align-items:center;gap:11px;background:none;border:0;color:#aebde3;text-align:left;padding:10px 12px;border-radius:10px;cursor:pointer;font-weight:600}
+aside button:hover{background:rgba(255,255,255,.08);color:#fff}aside button.on{background:rgba(255,255,255,.14);color:#fff;box-shadow:inset 3px 0 0 var(--bl2)}
+.sp{flex:1}
+.wrap{flex:1;min-width:0}
+.top{display:flex;justify-content:flex-end;align-items:center;gap:12px;padding:14px 28px 0}
+.chip{background:var(--card);border:1px solid var(--bd);border-radius:20px;padding:6px 14px;font-weight:600;font-size:13px}
+main{padding:14px 28px 40px;max-width:1280px}
+.ph{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.acts{display:flex;gap:10px;flex-wrap:wrap}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;box-shadow:var(--sh)}
+.fl{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:14px;margin-bottom:14px}
+.fl>*{flex:1 1 150px;min-width:130px}.fl .sb{flex:2 1 220px;position:relative}.fl .sb svg{position:absolute;left:11px;top:11px;color:var(--mu)}.fl .sb input{padding-left:34px}
+.fl .dr{margin:0;flex:1 1 130px}.fl .btn{flex:0 0 auto}
+.sum{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.sum span{background:var(--card);border:1px solid var(--bd);border-radius:20px;padding:2px 12px;font-size:12.5px;font-weight:600}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse}
+th,td{padding:12px 16px;text-align:left;border-bottom:1px solid var(--bd);white-space:nowrap}
+th{font-size:12px;color:var(--mu);font-weight:700;cursor:pointer;user-select:none;background:var(--in)}
+tr:last-child td{border-bottom:0}tbody tr:hover td{background:var(--in)}
+th.a,td.a{text-align:right}
+.pill{display:inline-block;border-radius:20px;padding:2px 11px;font-size:12px;font-weight:700;background:var(--bd)}
+.pill.Paid{background:#d1fae5;color:#065f46}.pill.Overdue{background:#fee2e2;color:#991b1b}.pill.Partial{background:#fef3c7;color:#92400e}.pill.Unpaid{background:#e2e8f0;color:#334155}
+.pg{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:14px}
+.empty{padding:44px;text-align:center;color:var(--mu)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:18px}
+.stat{padding:18px;display:flex;gap:14px;align-items:center}
+.stat i{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;color:#fff;font-style:normal;background:linear-gradient(135deg,var(--bl),var(--bl2))}
+.stat b{display:block;font-size:20px;font-weight:800;letter-spacing:-.01em}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}.grid2>.card{padding:20px}
+.bar{display:grid;grid-template-columns:110px 1fr 28px;gap:10px;align-items:center;margin-top:11px;font-size:13px}
+.bar div{height:9px;border-radius:9px;background:var(--bd);overflow:hidden}.bar div i{display:block;height:100%;border-radius:9px}
+.cols{display:flex;gap:14px;align-items:flex-end;height:150px;margin-top:16px}
+.cols>div{flex:1;text-align:center;font-size:12px;color:var(--mu)}
+.cols .b{display:flex;gap:4px;align-items:flex-end;height:120px;justify-content:center}
+.cols .b i{width:40%;max-width:22px;border-radius:6px 6px 0 0;display:block;min-height:2px}
+.lg{display:flex;gap:16px;font-size:12.5px;margin-top:8px}.lg span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;background:var(--c)}
+dialog{border:1px solid var(--bd);border-radius:18px;background:var(--card);color:var(--tx);width:min(600px,94vw);padding:24px;max-height:92vh;box-shadow:var(--sh)}
+dialog::backdrop{background:rgba(5,11,29,.6);backdrop-filter:blur(3px)}
+#df{display:grid;grid-template-columns:1fr 1fr;gap:14px}#df h2,#df .full,#df .foot{grid-column:1/-1}
+.foot{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
+#toast{position:fixed;bottom:22px;right:22px;background:var(--nv);color:#fff;padding:11px 18px;border-radius:12px;z-index:20;box-shadow:var(--sh)}
+@media(max-width:820px){
+#login{grid-template-columns:1fr}.hero{display:none}
+#app{flex-direction:column}
+aside{position:fixed;bottom:0;left:0;right:0;top:auto;height:auto;width:100%;flex-direction:row;padding:6px;z-index:10;justify-content:space-around}
+aside button{flex-direction:column;gap:2px;font-size:11px;padding:6px 8px}.brand,.sp{display:none}
+main,.top{padding-left:14px;padding-right:14px}main{padding-bottom:90px}.grid2{grid-template-columns:1fr}#df{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
 
 <section id="login">
-  <form id="lf">
-    <h1>ConnectPro Technologies</h1>
-    <div class="mu">Sign in to continue</div>
-    <label for="em">Username</label><input id="em" type="text" required autocomplete="username" autocapitalize="none" spellcheck="false">
-    <label for="pw">Password</label><input id="pw" type="password" required autocomplete="current-password">
-    <div class="err" id="le"></div>
-    <button class="btn" style="width:100%;margin-top:6px">Sign in</button>
-  </form>
+  <div class="hero">
+    <div class="brand"><span class="logo">CP</span>ConnectPro Technologies</div>
+    <div><h1>Jobs, customers and invoices in one place.</h1><p>Track every job from first call to final payment, and see what has actually been paid.</p></div>
+    <div class="mu" style="color:#8ea2d6">Secure sign-in for authorised staff only.</div>
+  </div>
+  <div class="lw">
+    <form id="lf">
+      <h1 style="font-size:28px">Welcome back</h1>
+      <div class="mu">Sign in to continue</div>
+      <div class="fld"><label for="em">Username</label><input id="em" type="text" required autocomplete="username" autocapitalize="none" spellcheck="false"></div>
+      <div class="fld"><label for="pw">Password</label><input id="pw" type="password" required autocomplete="current-password"></div>
+      <div class="err" id="le"></div>
+      <button class="btn" style="width:100%;justify-content:center;margin-top:6px">Sign in</button>
+    </form>
+  </div>
 </section>
 
 <div id="app" class="hide">
   <aside id="nav"></aside>
-  <main id="main"></main>
+  <div class="wrap">
+    <div class="top"><span class="chip" id="who"></span><button class="ib" id="th" aria-label="Switch light or dark mode"></button></div>
+    <main id="main"></main>
+  </div>
 </div>
 
 <dialog id="dlg"><form id="df" method="dialog"></form></dialog>
@@ -69,74 +116,84 @@ dialog::backdrop{background:rgba(5,11,29,.6)}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
 <script>
-/* 1. PUT YOUR SUPABASE VALUES HERE (Project Settings > API) */
 const SB_URL = 'https://thpvixtcahnbhjwowflx.supabase.co';
 const SB_KEY = 'sb_publishable_OKVV2xVJ6617aEmHT6NLdQ_EWQHXxkP';
-
 const sb = supabase.createClient(SB_URL, SB_KEY);
-const LOGIN_DOMAIN = '@connectpro.app'; // usernames become username@connectpro.app
+const LOGIN_DOMAIN = '@connectpro.app';
 const loginEmail = u => { u = u.trim().toLowerCase(); return u.includes('@') ? u : u + LOGIN_DOMAIN; };
 const $ = s => document.querySelector(s);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money = n => 'LKR ' + Number(n || 0).toLocaleString('en-LK', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-const S = {view: 'dashboard', q: '', cust: [], rows: [],
+const ICON = {grid:'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z', users:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8',
+  job:'M3 7h18v13H3zM8 7V4h8v3M3 13h18', file:'M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8zM14 3v5h5M9 13h6M9 17h6',
+  cog:'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4', out:'M9 21H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4M16 17l5-5-5-5M21 12H9',
+  moon:'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z', sun:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
+  dl:'M12 3v12M7 10l5 5 5-5M4 21h16', plus:'M12 5v14M5 12h14', search:'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5-5', cash:'M3 6h18v12H3zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6', clock:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2'};
+const ic = (n, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${ICON[n]}"/></svg>`;
+const S = {view: 'dashboard', q: '', f: {}, sort: {k: 'created_at', d: -1}, page: 1, cust: [], rows: [], user: '', period: 'all',
   statuses: ['Received','Inspection','Quotation','Approved','Assigned','In Progress','Completed','Invoiced','Paid']};
+const PS = 15;
 
+function theme(t) {
+  try { if (t) localStorage.setItem('th', t); else t = localStorage.getItem('th'); } catch (e) {}
+  t = t || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+  document.documentElement.dataset.theme = t; const b = $('#th'); if (b) b.innerHTML = ic(t === 'dark' ? 'sun' : 'moon'); return t;
+}
+theme();
 function toast(t) { const e = $('#toast'); e.textContent = t; e.classList.remove('hide'); setTimeout(() => e.classList.add('hide'), 2600); }
 const cname = id => (S.cust.find(c => c.id === id) || {}).name || '';
 const pad = (p, n) => p + String(n).padStart(4, '0');
+const hue = s => { const i = Math.max(0, S.statuses.indexOf(s)); return Math.round(215 - i * (75 / Math.max(1, S.statuses.length - 1))); };
+const pill = s => `<span class="pill" style="background:hsl(${hue(s)} 85% 91%);color:hsl(${hue(s)} 65% 24%)">${esc(s)}</span>`;
+const today = () => new Date().toISOString().slice(0, 10);
 function invStatus(r) {
   if (+r.paid >= +r.amount && +r.amount > 0) return 'Paid';
   if (+r.paid > 0) return 'Partial';
-  if (r.due_date && r.due_date < new Date().toISOString().slice(0, 10)) return 'Overdue';
+  if (r.due_date && r.due_date < today()) return 'Overdue';
   return 'Unpaid';
 }
+const txt = h => { const d = document.createElement('div'); d.innerHTML = h; return d.textContent; };
 
-/* Field: [key, label, type, required]  types: text, tel, email, number, date, textarea, cust, status, select:A,B */
+/* Field: [key, label, type, required] */
 const M = {
-  customers: {label: 'Customers', one: 'customer',
-    cols: [['name','Name'],['phone','Phone'],['email','Email'],['address','Address']],
+  customers: {label: 'Customers', one: 'customer', flt: [],
+    cols: [['name','Name',r => esc(r.name)],['phone','Phone'],['email','Email'],['address','Address']],
     f: [['name','Name','text',1],['phone','Phone','tel'],['email','Email','email'],['address','Address','textarea'],['notes','Notes','textarea']]},
-  jobs: {label: 'Jobs', one: 'job',
-    cols: [['job_no','Job',r => pad('J-', r.job_no)],['title','Title'],['customer_id','Customer',r => cname(r.customer_id)],
-      ['status','Status',r => `<span class="pill">${esc(r.status)}</span>`],['target_date','Target'],['value','Value',r => money(r.value),1]],
+  jobs: {label: 'Jobs', one: 'job', flt: ['status','priority','cust'], dt: 'received_date',
+    cols: [['job_no','Job',r => pad('J-', r.job_no)],['title','Title'],['customer_id','Customer',r => esc(cname(r.customer_id))],
+      ['status','Status',r => pill(r.status)],['priority','Priority'],['target_date','Target'],['value','Value',r => money(r.value),1]],
     f: [['customer_id','Customer','cust'],['title','Job title','text',1],['description','Description','textarea'],
       ['status','Status','status'],['priority','Priority','select:Low,Normal,High,Urgent'],
       ['received_date','Received date','date'],['target_date','Target date','date'],
       ['value','Job value (LKR)','number'],['cost','Total cost (LKR)','number'],['notes','Internal notes','textarea']]},
-  invoices: {label: 'Invoices', one: 'invoice',
-    cols: [['invoice_no','Invoice',r => pad('INV-', r.invoice_no)],['customer_id','Customer',r => cname(r.customer_id)],
+  invoices: {label: 'Invoices', one: 'invoice', flt: ['status','cust'], dt: 'issue_date',
+    cols: [['invoice_no','Invoice',r => pad('INV-', r.invoice_no)],['customer_id','Customer',r => esc(cname(r.customer_id))],
       ['issue_date','Issued'],['due_date','Due'],['amount','Invoice value',r => money(r.amount),1],
       ['paid','Received',r => money(r.paid),1],['s','Status',r => {const s = invStatus(r); return `<span class="pill ${s}">${s}</span>`}]],
     f: [['customer_id','Customer','cust'],['issue_date','Issue date','date'],['due_date','Due date','date'],
-      ['amount','Invoice value (LKR)','number'],['paid','Amount received (LKR)','number'],['notes','Notes','textarea']]},
-  settings: {label: 'Settings'}
+      ['amount','Invoice value (LKR)','number'],['paid','Amount received (LKR)','number'],['notes','Notes','textarea']]}
 };
 
 /* ---------- auth ---------- */
+$('#th').onclick = () => theme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
 $('#lf').onsubmit = async e => {
   e.preventDefault(); $('#le').textContent = '';
   const {error} = await sb.auth.signInWithPassword({email: loginEmail($('#em').value), password: $('#pw').value});
   if (error) $('#le').textContent = 'Sign-in failed. Check your username and password.';
 };
 let entered = false;
-sb.auth.onAuthStateChange((_, session) => { setTimeout(() => { session ? enter() : leave(); }, 0); });
-
-async function enter() {
+sb.auth.onAuthStateChange((_, session) => { setTimeout(() => { session ? enter(session) : leave(); }, 0); });
+async function enter(session) {
   if (entered) return;
   const {data, error} = await sb.from('app_users').select('id').limit(1);
   if (error) { $('#le').textContent = 'Database error: ' + error.message; return; }
-  if (!data || !data.length) {
-    await sb.auth.signOut();
-    $('#le').textContent = 'This account is not approved for this system.';
-    return;
-  }
+  if (!data || !data.length) { await sb.auth.signOut(); $('#le').textContent = 'This account is not approved for this system.'; return; }
   const st = await sb.from('app_settings').select('value').eq('key', 'job_statuses').maybeSingle();
   if (st.data && Array.isArray(st.data.value)) S.statuses = st.data.value;
   await loadCust();
-  entered = true;
-  $('#login').classList.add('hide'); $('#app').classList.remove('hide');
-  nav(); go('dashboard');
+  S.user = (session.user.email || '').split('@')[0]; S.user = S.user.charAt(0).toUpperCase() + S.user.slice(1);
+  $('#who').textContent = S.user; theme();
+  entered = true; $('#login').classList.add('hide'); $('#app').classList.remove('hide'); go('dashboard');
 }
 function leave() { entered = false; $('#app').classList.add('hide'); $('#login').classList.remove('hide'); }
 async function loadCust() {
@@ -146,81 +203,134 @@ async function loadCust() {
 
 /* ---------- navigation ---------- */
 function nav() {
-  const items = [['dashboard','Dashboard'],['customers','Customers'],['jobs','Jobs'],['invoices','Invoices'],['settings','Settings']];
-  $('#nav').innerHTML = '<b>ConnectPro</b>' + items.map(([k, l]) => `<button data-k="${k}" class="${S.view === k ? 'on' : ''}">${l}</button>`).join('')
-    + '<span class="sp"></span><button id="so">Sign out</button>';
+  const items = [['dashboard','Dashboard','grid'],['customers','Customers','users'],['jobs','Jobs','job'],['invoices','Invoices','file'],['settings','Settings','cog']];
+  $('#nav').innerHTML = '<div class="brand"><span class="logo">CP</span>ConnectPro</div>'
+    + items.map(([k, l, i]) => `<button data-k="${k}" class="${S.view === k ? 'on' : ''}">${ic(i)}<span>${l}</span></button>`).join('')
+    + `<span class="sp"></span><button id="so">${ic('out')}<span>Sign out</span></button>`;
   document.querySelectorAll('#nav [data-k]').forEach(b => b.onclick = () => go(b.dataset.k));
   $('#so').onclick = () => sb.auth.signOut();
 }
-function go(v) { S.view = v; S.q = ''; nav(); v === 'dashboard' ? dash() : v === 'settings' ? settings() : list(); }
+function go(v) { S.view = v; S.q = ''; S.f = {}; S.page = 1; S.sort = {k: 'created_at', d: -1}; nav(); v === 'dashboard' ? dash() : v === 'settings' ? settings() : list(); }
 
 /* ---------- dashboard ---------- */
+function since() {
+  const d = today();
+  return {all: '', month: d.slice(0, 8) + '01', '30': new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10), year: d.slice(0, 4) + '-01-01'}[S.period];
+}
 async function dash() {
-  $('#main').innerHTML = '<h2>Dashboard</h2><p class="mu">Loading…</p>';
+  $('#main').innerHTML = '<h1>Dashboard</h1><p class="mu">Loading…</p>';
   const [j, i] = await Promise.all([
-    sb.from('jobs').select('status,value,cost').is('deleted_at', null),
-    sb.from('invoices').select('amount,paid,due_date').is('deleted_at', null)]);
-  const jobs = j.data || [], inv = i.data || [];
-  const done = ['Completed','Invoiced','Paid'];
+    sb.from('jobs').select('job_no,title,status,value,cost,received_date,customer_id,created_at').is('deleted_at', null),
+    sb.from('invoices').select('amount,paid,issue_date').is('deleted_at', null)]);
+  const lim = since(), allInv = i.data || [];
+  const jobs = (j.data || []).filter(x => !lim || (x.received_date || '') >= lim), inv = allInv.filter(x => !lim || (x.issue_date || '') >= lim);
+  const done = S.statuses.slice(-3), sum = (a, k) => a.reduce((t, x) => t + +x[k], 0);
+  const billed = sum(inv, 'amount'), got = sum(inv, 'paid');
   const open = jobs.filter(x => !done.includes(x.status)).length;
-  const billed = inv.reduce((a, x) => a + +x.amount, 0), got = inv.reduce((a, x) => a + +x.paid, 0);
-  const cost = jobs.reduce((a, x) => a + +x.cost, 0);
-  const byStatus = S.statuses.map(s => `<tr><td>${esc(s)}</td><td class="a">${jobs.filter(x => x.status === s).length}</td></tr>`).join('');
-  $('#main').innerHTML = `<h2 style="margin-bottom:16px">Dashboard</h2><div class="stats">
-    <div class="stat"><span class="mu">Open jobs</span><div>${open}</div></div>
-    <div class="stat"><span class="mu">Total invoiced</span><div>${money(billed)}</div></div>
-    <div class="stat"><span class="mu">Money received</span><div>${money(got)}</div></div>
-    <div class="stat"><span class="mu">Outstanding</span><div>${money(billed - got)}</div></div>
-    <div class="stat"><span class="mu">Job costs recorded</span><div>${money(cost)}</div></div></div>
-    <h2 style="margin:24px 0 10px;font-size:16px">Jobs by status</h2>
-    <div class="tw"><table>${byStatus}</table></div>`;
+  const card = (ico, l, v) => `<div class="card stat"><i>${ic(ico, 20)}</i><div><span class="mu">${l}</span><b>${v}</b></div></div>`;
+  const mx = Math.max(1, ...S.statuses.map(s => jobs.filter(x => x.status === s).length));
+  const bars = S.statuses.map(s => {const n = jobs.filter(x => x.status === s).length; return `<div class="bar"><span>${esc(s)}</span><div><i style="width:${n / mx * 100}%;background:hsl(${hue(s)} 75% 50%)"></i></div><b>${n}</b></div>`}).join('');
+  const months = [...Array(6)].map((_, k) => {const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 5 + k); return d.toISOString().slice(0, 7)});
+  const mv = months.map(m => [sum(allInv.filter(x => (x.issue_date || '').startsWith(m)), 'amount'), sum(allInv.filter(x => (x.issue_date || '').startsWith(m)), 'paid')]);
+  const mm = Math.max(1, ...mv.flat());
+  const cols = months.map((m, k) => `<div><div class="b"><i style="height:${mv[k][0] / mm * 100}%;background:var(--bl)"></i><i style="height:${mv[k][1] / mm * 100}%;background:#10b981"></i></div>${new Date(m + '-02').toLocaleString('en', {month: 'short'})}</div>`).join('');
+  const recent = jobs.sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 5);
+  const rec = recent.length ? '<table><tbody>' + recent.map(r => `<tr><td>${pad('J-', r.job_no)}</td><td>${esc(r.title)}</td><td>${esc(cname(r.customer_id))}</td><td>${pill(r.status)}</td></tr>`).join('') + '</tbody></table>' : '<p class="empty">No jobs in this period.</p>';
+  $('#main').innerHTML = `<div class="ph"><div><h1>Hello, ${esc(S.user)}</h1><p class="mu" style="margin:2px 0 0">Here is how the business looks right now.</p></div>
+    <div class="acts"><select id="pd" aria-label="Period"><option value="all">All time</option><option value="year">This year</option><option value="month">This month</option><option value="30">Last 30 days</option></select></div></div>
+    <div class="stats">${card('job','Open jobs',open)}${card('file','Total invoiced',money(billed))}${card('cash','Money received',money(got))}${card('clock','Outstanding',money(billed - got))}${card('cog','Job costs',money(sum(jobs, 'cost')))}</div>
+    <div class="grid2"><div class="card"><h2>Jobs by status</h2>${bars}</div>
+    <div class="card"><h2>Invoiced vs received, last 6 months</h2><div class="cols">${cols}</div><div class="lg"><span style="--c:var(--bl)">Invoiced</span><span style="--c:#10b981">Received</span></div></div></div>
+    <div class="card tw"><div style="padding:18px 20px 6px"><h2>Recent jobs</h2></div>${rec}</div>`;
+  $('#pd').value = S.period; $('#pd').onchange = e => { S.period = e.target.value; dash(); };
 }
 
-/* ---------- list view ---------- */
+/* ---------- list view with filters ---------- */
 async function list() {
   const m = M[S.view];
-  $('#main').innerHTML = `<div class="bar"><h2>${m.label}</h2><button class="btn" id="add">Add ${m.one}</button><input id="q" placeholder="Search ${m.label.toLowerCase()}" aria-label="Search"></div><div class="tw" id="tb"><p class="empty">Loading…</p></div>`;
-  $('#add').onclick = () => form();
-  $('#q').oninput = e => { S.q = e.target.value.toLowerCase(); draw(); };
+  $('#main').innerHTML = `<div class="ph"><div><h1>${m.label}</h1><div class="sum" id="sub"></div></div>
+    <div class="acts"><button class="btn g" id="ex">${ic('dl', 16)} Export CSV</button><button class="btn" id="add">${ic('plus', 16)} Add ${m.one}</button></div></div>
+    <div class="card fl" id="fl"></div><div class="card tw" id="tb"><p class="empty">Loading…</p></div><div class="pg" id="pg"></div>`;
+  $('#add').onclick = () => form(); $('#ex').onclick = exportCsv;
+  filterUI();
   const {data, error} = await sb.from(S.view).select('*').is('deleted_at', null).order('created_at', {ascending: false});
   if (error) { $('#tb').innerHTML = `<p class="empty">Could not load data: ${esc(error.message)}</p>`; return; }
   S.rows = data; draw();
 }
+function filterUI() {
+  const m = M[S.view], f = S.f;
+  const sel = (id, l, o) => `<div><label>${l}</label><select id="${id}"><option value="">All</option>${o.map(x => `<option value="${esc(x[0])}"${f[id] === x[0] ? ' selected' : ''}>${esc(x[1])}</option>`).join('')}</select></div>`;
+  let h = `<div class="sb">${ic('search', 16)}<input id="q" placeholder="Search ${m.label.toLowerCase()}" aria-label="Search" value="${esc(S.q)}"></div>`;
+  if (m.flt.includes('status')) h += sel('status', 'Status', (S.view === 'jobs' ? S.statuses : ['Unpaid','Partial','Paid','Overdue']).map(x => [x, x]));
+  if (m.flt.includes('priority')) h += sel('priority', 'Priority', ['Low','Normal','High','Urgent'].map(x => [x, x]));
+  if (m.flt.includes('cust')) h += sel('cust', 'Customer', S.cust.map(c => [c.id, c.name]));
+  if (m.dt) h += `<div class="dr"><label>From</label><input type="date" id="from" value="${f.from || ''}"></div><div class="dr"><label>To</label><input type="date" id="to" value="${f.to || ''}"></div>`;
+  h += '<button class="btn g" id="clr">Clear filters</button>';
+  $('#fl').innerHTML = h;
+  $('#q').oninput = e => { S.q = e.target.value.toLowerCase(); S.page = 1; draw(); };
+  ['status','priority','cust','from','to'].forEach(id => { const e = $('#' + id); if (e) e.onchange = () => { S.f[id] = e.value; S.page = 1; draw(); }; });
+  $('#clr').onclick = () => { S.f = {}; S.q = ''; S.page = 1; filterUI(); draw(); };
+}
+function filt(r) {
+  const f = S.f, m = M[S.view];
+  if (S.q && !(Object.values(r).join(' ') + ' ' + cname(r.customer_id)).toLowerCase().includes(S.q)) return false;
+  if (f.status && (S.view === 'invoices' ? invStatus(r) : r.status) !== f.status) return false;
+  if (f.priority && r.priority !== f.priority) return false;
+  if (f.cust && r.customer_id !== f.cust) return false;
+  const d = m.dt ? r[m.dt] : null;
+  if (f.from && (!d || d < f.from)) return false;
+  if (f.to && (!d || d > f.to)) return false;
+  return true;
+}
+const val = (r, k) => k === 's' ? invStatus(r) : k === 'customer_id' ? cname(r.customer_id) : r[k];
 function draw() {
-  const m = M[S.view];
-  const rows = S.rows.filter(r => !S.q || Object.values(r).join(' ').toLowerCase().includes(S.q) || cname(r.customer_id).toLowerCase().includes(S.q));
-  if (!rows.length) { $('#tb').innerHTML = `<p class="empty">${S.rows.length ? 'No matches.' : 'No ' + m.label.toLowerCase() + ' yet. Use “Add ' + m.one + '” to create the first one.'}</p>`; return; }
-  $('#tb').innerHTML = '<table><thead><tr>' + m.cols.map(c => `<th${c[3] ? ' class="a"' : ''}>${c[1]}</th>`).join('') + '<th></th></tr></thead><tbody>'
-    + rows.map(r => '<tr>' + m.cols.map(c => `<td${c[3] ? ' class="a"' : ''}>${c[2] ? c[2](r) : esc(r[c[0]])}</td>`).join('')
+  const m = M[S.view], {k, d} = S.sort;
+  const rows = S.rows.filter(filt).sort((a, b) => { const x = val(a, k), y = val(b, k);
+    return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x ?? '').localeCompare(String(y ?? ''))) * d; });
+  const tot = c => rows.reduce((a, r) => a + +r[c], 0), ch = t => `<span>${t}</span>`;
+  $('#sub').innerHTML = ch(rows.length + ' of ' + S.rows.length) + (S.view === 'jobs' ? ch('Value ' + money(tot('value'))) + ch('Cost ' + money(tot('cost')))
+    : S.view === 'invoices' ? ch('Invoiced ' + money(tot('amount'))) + ch('Received ' + money(tot('paid'))) + ch('Outstanding ' + money(tot('amount') - tot('paid'))) : '');
+  const pages = Math.max(1, Math.ceil(rows.length / PS)); S.page = Math.min(S.page, pages);
+  const vis = rows.slice((S.page - 1) * PS, S.page * PS);
+  if (!vis.length) { $('#tb').innerHTML = `<p class="empty">${S.rows.length ? 'No records match these filters. Try clearing them.' : 'No ' + m.label.toLowerCase() + ' yet. Use “Add ' + m.one + '” to create the first one.'}</p>`; $('#pg').innerHTML = ''; return; }
+  $('#tb').innerHTML = '<table><thead><tr>' + m.cols.map(c => `<th data-s="${c[0]}"${c[3] ? ' class="a"' : ''}>${c[1]}${k === c[0] ? (d > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '<th></th></tr></thead><tbody>'
+    + vis.map(r => '<tr>' + m.cols.map(c => `<td${c[3] ? ' class="a"' : ''}>${c[2] ? c[2](r) : esc(r[c[0]])}</td>`).join('')
       + `<td class="a"><button class="btn g s" data-e="${r.id}">Edit</button> <button class="btn g s" data-d="${r.id}">Delete</button></td></tr>`).join('') + '</tbody></table>';
+  $('#pg').innerHTML = pages > 1 ? `<button class="btn g s" id="pv"${S.page < 2 ? ' disabled' : ''}>Previous</button><span class="mu">Page ${S.page} of ${pages}</span><button class="btn g s" id="nx"${S.page >= pages ? ' disabled' : ''}>Next</button>` : '';
+  if (pages > 1) { $('#pv').onclick = () => { S.page--; draw(); }; $('#nx').onclick = () => { S.page++; draw(); }; }
+  document.querySelectorAll('th[data-s]').forEach(t => t.onclick = () => { S.sort = {k: t.dataset.s, d: S.sort.k === t.dataset.s ? -S.sort.d : 1}; draw(); });
   document.querySelectorAll('[data-e]').forEach(b => b.onclick = () => form(S.rows.find(r => r.id === b.dataset.e)));
   document.querySelectorAll('[data-d]').forEach(b => b.onclick = () => del(b.dataset.d));
+}
+function exportCsv() {
+  const m = M[S.view], rows = S.rows.filter(filt), cell = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const csv = [m.cols.map(c => cell(c[1])).join(',')].concat(rows.map(r => m.cols.map(c => cell(c[2] ? txt(c[2](r)) : r[c[0]])).join(','))).join('\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], {type: 'text/csv'}));
+  a.download = S.view + '-' + today() + '.csv'; a.click(); toast('Exported ' + rows.length + ' rows');
 }
 
 /* ---------- add / edit ---------- */
 function input(f, v) {
-  const [k, l, t, req] = f, val = v ?? '', r = req ? ' required' : '';
+  const [k, l, t, req] = f, val = v ?? '';
   let h;
   if (t === 'textarea') h = `<textarea name="${k}" rows="3">${esc(val)}</textarea>`;
   else if (t === 'cust') h = `<select name="${k}"><option value="">None</option>${S.cust.map(c => `<option value="${c.id}"${c.id === val ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}</select>`;
   else if (t === 'status' || t.startsWith('select:')) {
     const o = t === 'status' ? S.statuses : t.slice(7).split(',');
     h = `<select name="${k}">${o.map(x => `<option${x === val ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
-  } else h = `<input name="${k}" type="${t}"${t === 'number' ? ' step="0.01" min="0"' : ''} value="${esc(val)}"${r}>`;
-  return `<label for="">${l}${req ? ' *' : ''}</label>${h}`;
+  } else h = `<input name="${k}" type="${t}"${t === 'number' ? ' step="0.01" min="0"' : ''} value="${esc(val)}"${req ? ' required' : ''}>`;
+  return `<div class="fld${t === 'textarea' ? ' full' : ''}"><label>${l}${req ? ' *' : ''}</label>${h}</div>`;
 }
 function form(row) {
   const m = M[S.view];
-  $('#df').innerHTML = `<h2>${row ? 'Edit' : 'Add'} ${m.one}</h2>` + m.f.map(f => input(f, row ? row[f[0]] : (f[2] === 'status' ? S.statuses[0] : f[2] === 'select:Low,Normal,High,Urgent' ? 'Normal' : ''))).join('')
-    + '<div class="foot"><button type="button" class="btn g" id="cx">Cancel</button><button class="btn">Save ' + m.one + '</button></div>';
+  $('#df').innerHTML = `<h2>${row ? 'Edit' : 'Add'} ${m.one}</h2>` + m.f.map(f => input(f, row ? row[f[0]] : (f[2] === 'status' ? S.statuses[0] : f[2].startsWith('select:') ? 'Normal' : f[0] === 'issue_date' || f[0] === 'received_date' ? today() : ''))).join('')
+    + `<div class="foot"><button type="button" class="btn g" id="cx">Cancel</button><button class="btn">Save ${m.one}</button></div>`;
   $('#cx').onclick = () => $('#dlg').close();
   $('#df').onsubmit = async e => {
     e.preventDefault();
     const fd = new FormData($('#df')), o = {};
-    m.f.forEach(([k,, t]) => { let v = fd.get(k); o[k] = v === '' || v === null ? null : t === 'number' ? +v : v; });
-    if (S.view !== 'customers') m.f.forEach(([k,, t]) => { if (t === 'number' && o[k] === null) o[k] = 0; });
-    const q = row ? sb.from(S.view).update(o).eq('id', row.id) : sb.from(S.view).insert(o);
-    const {error} = await q;
+    m.f.forEach(([k,, t]) => { const v = fd.get(k); o[k] = v === '' || v === null ? (t === 'number' && S.view !== 'customers' ? 0 : null) : t === 'number' ? +v : v; });
+    const {error} = await (row ? sb.from(S.view).update(o).eq('id', row.id) : sb.from(S.view).insert(o));
     if (error) return toast('Save failed: ' + error.message);
     $('#dlg').close(); toast(row ? 'Saved' : 'Created');
     if (S.view === 'customers') await loadCust();
@@ -229,7 +339,7 @@ function form(row) {
   $('#dlg').showModal();
 }
 async function del(id) {
-  if (!confirm('Delete this ' + M[S.view].one + '? It will be moved to the recycle bin and can be restored from the database.')) return;
+  if (!confirm('Delete this ' + M[S.view].one + '? It will be hidden but kept in the database.')) return;
   const {error} = await sb.from(S.view).update({deleted_at: new Date().toISOString()}).eq('id', id);
   if (error) return toast('Delete failed: ' + error.message);
   toast('Deleted'); if (S.view === 'customers') await loadCust(); list();
@@ -237,10 +347,10 @@ async function del(id) {
 
 /* ---------- settings ---------- */
 function settings() {
-  $('#main').innerHTML = `<h2 style="margin-bottom:6px">Settings</h2><p class="mu">Currency: LKR. Time zone: Asia/Colombo.</p>
-    <div class="stat" style="max-width:520px"><b>Job statuses</b><p class="mu" style="margin:4px 0 0">One status per line, in workflow order. Add, rename or remove any of them.</p>
+  $('#main').innerHTML = `<div class="ph"><div><h1>Settings</h1><p class="mu" style="margin:2px 0 0">Currency: LKR. Time zone: Asia/Colombo.</p></div></div>
+    <div class="card" style="padding:22px;max-width:560px"><h2>Job statuses</h2><p class="mu" style="margin:4px 0 12px">One status per line, in workflow order. Add, rename or remove any of them.</p>
     <textarea id="ss" rows="10">${esc(S.statuses.join('\n'))}</textarea>
-    <div class="foot"><button class="btn" id="sv">Save statuses</button></div></div>`;
+    <div class="foot" style="margin-top:14px"><button class="btn" id="sv">Save statuses</button></div></div>`;
   $('#sv').onclick = async () => {
     const v = $('#ss').value.split('\n').map(x => x.trim()).filter(Boolean);
     if (!v.length) return toast('Add at least one status');
