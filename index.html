@@ -74,6 +74,39 @@ dialog::backdrop{background:rgba(5,11,29,.6);backdrop-filter:blur(3px)}
 #df{display:grid;grid-template-columns:1fr 1fr;gap:14px}#df h2,#df .full,#df .foot{grid-column:1/-1}
 .foot{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
 #toast{position:fixed;bottom:22px;right:22px;background:var(--nv);color:#fff;padding:11px 18px;border-radius:12px;z-index:20;box-shadow:var(--sh)}
+/* motion + extras */
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+@keyframes flt{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-26px) scale(1.06)}}
+@keyframes shim{to{background-position:-200% 0}}
+@keyframes tin{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+main>*{animation:up .5s both}main>*:nth-child(2){animation-delay:.06s}main>*:nth-child(3){animation-delay:.12s}main>*:nth-child(4){animation-delay:.18s}main>*:nth-child(5){animation-delay:.24s}
+.stat{animation:up .55s both;transition:transform .25s,box-shadow .25s}.stat:hover{transform:translateY(-4px);box-shadow:0 16px 36px rgba(37,99,235,.2)}
+.stat:nth-child(2){animation-delay:.06s}.stat:nth-child(3){animation-delay:.12s}.stat:nth-child(4){animation-delay:.18s}.stat:nth-child(5){animation-delay:.24s}.stat:nth-child(6){animation-delay:.3s}
+.stat i{box-shadow:0 8px 18px rgba(37,99,235,.28)}
+.btn{transition:transform .15s,box-shadow .2s,background .2s}.btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(37,99,235,.35)}.btn.g:hover{box-shadow:0 6px 16px rgba(10,27,69,.12)}.btn:active{transform:scale(.97)}.btn:disabled{opacity:.5;pointer-events:none}
+.ib{transition:transform .2s}.ib:hover{transform:rotate(18deg)}
+aside button{transition:background .2s,color .2s,transform .2s}aside button:hover{transform:translateX(3px)}
+tbody tr{animation:up .35s both}tbody tr:nth-child(2){animation-delay:.03s}tbody tr:nth-child(3){animation-delay:.06s}tbody tr:nth-child(4){animation-delay:.09s}tbody tr:nth-child(5){animation-delay:.12s}tbody tr:nth-child(n+6){animation-delay:.15s}
+td .btn.s{padding:6px 9px}td .btn{vertical-align:middle}
+dialog[open]{animation:pop .22s}
+#toast{display:flex;gap:8px;align-items:center;animation:tin .3s}
+.bar div i,.cols .b i{transition:width .9s cubic-bezier(.2,.8,.2,1),height .9s cubic-bezier(.2,.8,.2,1)}
+.arc{transition:stroke-dashoffset 1.3s cubic-bezier(.2,.8,.2,1)}
+.sk{height:18px;border-radius:8px;background:linear-gradient(90deg,var(--bd) 25%,var(--in) 50%,var(--bd) 75%);background-size:200% 100%;animation:shim 1.3s infinite;margin:14px 0}
+.hero{position:relative;overflow:hidden}.hero>*:not(.blob){position:relative}
+.blob{position:absolute;border-radius:50%;background:linear-gradient(135deg,var(--bl2),var(--bl));opacity:.28;animation:flt 9s ease-in-out infinite}
+.ft{list-style:none;padding:0;margin:28px 0 0;display:grid;gap:14px}.ft li{display:flex;gap:12px;align-items:center;color:#d3def7;animation:up .6s both}
+.fi{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.12);display:grid;place-items:center;backdrop-filter:blur(6px)}
+.logo{box-shadow:0 0 0 4px rgba(14,165,233,.18)}
+.hh{display:flex;gap:14px;align-items:center}.hi{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,var(--bl),var(--bl2));box-shadow:0 8px 20px rgba(37,99,235,.3)}
+.rings{display:flex;gap:24px;justify-content:space-around;flex-wrap:wrap;margin-top:14px}.ring{text-align:center}
+.cmw{position:relative}.fl .cmw{flex:0 0 auto}.cm{position:absolute;right:0;top:46px;padding:8px 16px;z-index:6;min-width:180px;animation:pop .18s}
+.cm label{display:flex;gap:8px;align-items:center;font-size:13.5px;color:var(--tx);margin:8px 0;cursor:pointer}.cm input{width:auto}
+.card .fld{margin-top:12px}
+.empty svg{color:var(--bl);opacity:.6;margin-bottom:6px}
+.pg select{width:auto;padding:6px 10px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media(max-width:820px){
 #login{grid-template-columns:1fr}.hero{display:none}
 #app{flex-direction:column}
@@ -87,8 +120,9 @@ main,.top{padding-left:14px;padding-right:14px}main{padding-bottom:90px}.grid2{g
 
 <section id="login">
   <div class="hero">
+    <i class="blob" style="width:260px;height:260px;right:-70px;top:-60px"></i><i class="blob" style="width:160px;height:160px;left:8%;bottom:14%;animation-delay:-4s"></i><i class="blob" style="width:90px;height:90px;right:22%;bottom:30%;animation-delay:-2s"></i>
     <div class="brand"><span class="logo">CP</span>ConnectPro Technologies</div>
-    <div><h1>Jobs, customers and invoices in one place.</h1><p>Track every job from first call to final payment, and see what has actually been paid.</p></div>
+    <div><h1>Jobs, customers and invoices in one place.</h1><p>Track every job from first call to final payment, and see what has actually been paid.</p><ul class="ft" id="ft"></ul></div>
     <div class="mu" style="color:#8ea2d6">Secure sign-in for authorised staff only.</div>
   </div>
   <div class="lw">
@@ -115,6 +149,7 @@ main,.top{padding-left:14px;padding-right:14px}main{padding-bottom:90px}.grid2{g
 <div id="toast" class="hide"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 const SB_URL = 'https://thpvixtcahnbhjwowflx.supabase.co';
 const SB_KEY = 'sb_publishable_OKVV2xVJ6617aEmHT6NLdQ_EWQHXxkP';
@@ -123,14 +158,14 @@ const LOGIN_DOMAIN = '@connectpro.app';
 const loginEmail = u => { u = u.trim().toLowerCase(); return u.includes('@') ? u : u + LOGIN_DOMAIN; };
 const $ = s => document.querySelector(s);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const money = n => 'LKR ' + Number(n || 0).toLocaleString('en-LK', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const money = n => S.cur + ' ' + Number(n || 0).toLocaleString('en-LK', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const ICON = {grid:'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z', users:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8',
   job:'M3 7h18v13H3zM8 7V4h8v3M3 13h18', file:'M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8zM14 3v5h5M9 13h6M9 17h6',
   cog:'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4', out:'M9 21H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4M16 17l5-5-5-5M21 12H9',
   moon:'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z', sun:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
-  dl:'M12 3v12M7 10l5 5 5-5M4 21h16', plus:'M12 5v14M5 12h14', search:'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5-5', cash:'M3 6h18v12H3zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6', clock:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2'};
+  dl:'M12 3v12M7 10l5 5 5-5M4 21h16', plus:'M12 5v14M5 12h14', search:'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5-5', cash:'M3 6h18v12H3zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6', clock:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2', quote:'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01', up:'M12 16V4M7 9l5-5 5 5M4 21h16', edit:'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z', trash:'M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6', check:'M20 6L9 17l-5-5', x:'M18 6L6 18M6 6l12 12', filter:'M3 4h18l-7 8v6l-4 2v-8z', cols:'M3 4h18v16H3zM9 4v16M15 4v16', trend:'M3 17l6-6 4 4 8-8M14 7h7v7'};
 const ic = (n, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${ICON[n]}"/></svg>`;
-const S = {view: 'dashboard', q: '', f: {}, sort: {k: 'created_at', d: -1}, page: 1, cust: [], rows: [], user: '', period: 'all',
+const S = {view: 'dashboard', q: '', f: {}, sort: {k: 'created_at', d: -1}, page: 1, ps: 15, hid: {}, dcust: '', dfrom: '', dto: '', cur: 'LKR', co: 'ConnectPro', terms: 30, dur: 14, cust: [], jobs: [], rows: [], user: '', period: 'all',
   statuses: ['Received','Inspection','Quotation','Approved','Assigned','In Progress','Completed','Invoiced','Paid']};
 const PS = 15;
 
@@ -140,7 +175,28 @@ function theme(t) {
   document.documentElement.dataset.theme = t; const b = $('#th'); if (b) b.innerHTML = ic(t === 'dark' ? 'sun' : 'moon'); return t;
 }
 theme();
-function toast(t) { const e = $('#toast'); e.textContent = t; e.classList.remove('hide'); setTimeout(() => e.classList.add('hide'), 2600); }
+function toast(t) {
+  const e = $('#toast'), bad = /fail|error|required|select a job|could not/i.test(t);
+  e.innerHTML = ic(bad ? 'x' : 'check', 16) + '<span>' + esc(t) + '</span>'; e.style.background = bad ? '#b91c1c' : '';
+  e.classList.remove('hide'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.add('hide'), 3000);
+}
+const addDays = n => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
+function countUp() {
+  document.querySelectorAll('[data-n]').forEach(e => { const n = +e.dataset.n, mo = e.dataset.f === 'm', t0 = performance.now();
+    const step = t => { const p = Math.min(1, (t - t0) / 900), v = n * (1 - Math.pow(1 - p, 3)); e.textContent = mo ? money(v) : Math.round(v).toLocaleString(); if (p < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step); });
+}
+function runAnim() {
+  countUp();
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.querySelectorAll('[data-w]').forEach(e => e.style.width = e.dataset.w);
+    document.querySelectorAll('[data-h]').forEach(e => e.style.height = e.dataset.h);
+    document.querySelectorAll('[data-o]').forEach(e => e.style.strokeDashoffset = e.dataset.o);
+  }));
+}
+try { S.hid = JSON.parse(localStorage.getItem('hid') || '{}'); } catch (e) {}
+$('#ft').innerHTML = [['quote','Quotations that turn into jobs automatically'],['trend','Live cost and profit on every job'],['up','Excel import, update and export']]
+  .map(([i, t], k) => `<li style="animation-delay:${.25 + k * .12}s"><span class="fi">${ic(i, 18)}</span>${t}</li>`).join('');
 const cname = id => (S.cust.find(c => c.id === id) || {}).name || '';
 const pad = (p, n) => p + String(n).padStart(4, '0');
 const hue = s => { const i = Math.max(0, S.statuses.indexOf(s)); return Math.round(215 - i * (75 / Math.max(1, S.statuses.length - 1))); };
@@ -154,23 +210,36 @@ function invStatus(r) {
 }
 const txt = h => { const d = document.createElement('div'); d.innerHTML = h; return d.textContent; };
 
+const QST = ['Draft','Sent','Approved','Not Approved'];
+const qcls = {Draft: 'Unpaid', Sent: 'Partial', Approved: 'Paid', 'Not Approved': 'Overdue'};
+const qpill = s => `<span class="pill ${qcls[s] || 'Unpaid'}">${esc(s)}</span>`;
+const jcost = r => (+r.labour_cost || 0) + (+r.material_cost || 0) + (+r.transport_cost || 0) + (+r.other_cost || 0);
+const profit = (v, c) => `<b style="color:${v - c >= 0 ? '#059669' : '#dc2626'}">${money(v - c)}</b>`;
+const jno = id => { const j = S.jobs.find(x => x.id === id); return j ? pad('J-', j.job_no) : ''; };
+const costF = [['labour_cost','Labour charge (LKR)','number'],['material_cost','Material cost (LKR)','number'],['transport_cost','Transport cost (LKR)','number'],['other_cost','Other expenses (LKR)','number']];
 /* Field: [key, label, type, required] */
 const M = {
   customers: {label: 'Customers', one: 'customer', flt: [],
     cols: [['name','Name',r => esc(r.name)],['phone','Phone'],['email','Email'],['address','Address']],
     f: [['name','Name','text',1],['phone','Phone','tel'],['email','Email','email'],['address','Address','textarea'],['notes','Notes','textarea']]},
-  jobs: {label: 'Jobs', one: 'job', flt: ['status','priority','cust'], dt: 'received_date',
+  quotations: {label: 'Quotations', one: 'quotation', flt: ['status','cust'], dt: 'quote_date', vk: 'amount', no: ['Quote No','quote_no','Q-'],
+    cols: [['quote_no','Quote',r => pad('Q-', r.quote_no)],['title','Title'],['customer_id','Customer',r => esc(cname(r.customer_id))],
+      ['status','Status',r => qpill(r.status)],['job_id','Job',r => esc(jno(r.job_id))],['amount','Quote value',r => money(r.amount),1],['est','Est. profit',r => profit(r.amount, jcost(r)),1]],
+    f: [['customer_id','Customer','cust'],['title','Title','text',1],['description','Description','textarea'],['quote_date','Quote date','date'],
+      ['status','Status','select:Draft,Sent,Approved,Not Approved'],...costF,['amount','Quotation value (LKR)','number'],['notes','Notes','textarea']]},
+  jobs: {label: 'Jobs', one: 'job', flt: ['status','priority','cust'], dt: 'received_date', vk: 'value', no: ['Job No','job_no','J-'],
     cols: [['job_no','Job',r => pad('J-', r.job_no)],['title','Title'],['customer_id','Customer',r => esc(cname(r.customer_id))],
-      ['status','Status',r => pill(r.status)],['priority','Priority'],['target_date','Target'],['value','Value',r => money(r.value),1]],
+      ['status','Status',r => pill(r.status)],['target_date','Target'],['value','Value',r => money(r.value),1],
+      ['cost','Cost',r => money(jcost(r)),1],['profit','Profit',r => profit(r.value, jcost(r)),1]],
     f: [['customer_id','Customer','cust'],['title','Job title','text',1],['description','Description','textarea'],
       ['status','Status','status'],['priority','Priority','select:Low,Normal,High,Urgent'],
-      ['received_date','Received date','date'],['target_date','Target date','date'],
-      ['value','Job value (LKR)','number'],['cost','Total cost (LKR)','number'],['notes','Internal notes','textarea']]},
-  invoices: {label: 'Invoices', one: 'invoice', flt: ['status','cust'], dt: 'issue_date',
-    cols: [['invoice_no','Invoice',r => pad('INV-', r.invoice_no)],['customer_id','Customer',r => esc(cname(r.customer_id))],
+      ['received_date','Received date','date'],['target_date','Target date','date'],['completion_date','Completion date','date'],
+      ['value','Job value (LKR)','number'],...costF,['notes','Internal notes','textarea']]},
+  invoices: {label: 'Invoices', one: 'invoice', flt: ['status','cust'], dt: 'issue_date', vk: 'amount', no: ['Invoice No','invoice_no','INV-'],
+    cols: [['invoice_no','Invoice',r => pad('INV-', r.invoice_no)],['job_id','Job',r => esc(jno(r.job_id))],['customer_id','Customer',r => esc(cname(r.customer_id))],
       ['issue_date','Issued'],['due_date','Due'],['amount','Invoice value',r => money(r.amount),1],
       ['paid','Received',r => money(r.paid),1],['s','Status',r => {const s = invStatus(r); return `<span class="pill ${s}">${s}</span>`}]],
-    f: [['customer_id','Customer','cust'],['issue_date','Issue date','date'],['due_date','Due date','date'],
+    f: [['job_id','Job (job number)','job',1],['issue_date','Issue date','date'],['due_date','Due date','date'],
       ['amount','Invoice value (LKR)','number'],['paid','Amount received (LKR)','number'],['notes','Notes','textarea']]}
 };
 
@@ -190,7 +259,9 @@ async function enter(session) {
   if (!data || !data.length) { await sb.auth.signOut(); $('#le').textContent = 'This account is not approved for this system.'; return; }
   const st = await sb.from('app_settings').select('value').eq('key', 'job_statuses').maybeSingle();
   if (st.data && Array.isArray(st.data.value)) S.statuses = st.data.value;
-  await loadCust();
+  const pf = await sb.from('app_settings').select('value').eq('key', 'prefs').maybeSingle();
+  if (pf.data && pf.data.value) Object.assign(S, pf.data.value);
+  await loadCust(); await loadJobs();
   S.user = (session.user.email || '').split('@')[0]; S.user = S.user.charAt(0).toUpperCase() + S.user.slice(1);
   $('#who').textContent = S.user; theme();
   entered = true; $('#login').classList.add('hide'); $('#app').classList.remove('hide'); go('dashboard');
@@ -200,11 +271,15 @@ async function loadCust() {
   const {data} = await sb.from('customers').select('id,name').is('deleted_at', null).order('name');
   S.cust = data || [];
 }
+async function loadJobs() {
+  const {data} = await sb.from('jobs').select('id,job_no,title,customer_id,value,status').is('deleted_at', null).order('job_no');
+  S.jobs = data || [];
+}
 
 /* ---------- navigation ---------- */
 function nav() {
-  const items = [['dashboard','Dashboard','grid'],['customers','Customers','users'],['jobs','Jobs','job'],['invoices','Invoices','file'],['settings','Settings','cog']];
-  $('#nav').innerHTML = '<div class="brand"><span class="logo">CP</span>ConnectPro</div>'
+  const items = [['dashboard','Dashboard','grid'],['customers','Customers','users'],['quotations','Quotations','quote'],['jobs','Jobs','job'],['invoices','Invoices','file'],['settings','Settings','cog']];
+  $('#nav').innerHTML = '<div class="brand"><span class="logo">${esc(S.co.slice(0, 2).toUpperCase())}</span>${esc(S.co)}</div>'
     + items.map(([k, l, i]) => `<button data-k="${k}" class="${S.view === k ? 'on' : ''}">${ic(i)}<span>${l}</span></button>`).join('')
     + `<span class="sp"></span><button id="so">${ic('out')}<span>Sign out</span></button>`;
   document.querySelectorAll('#nav [data-k]').forEach(b => b.onclick = () => go(b.dataset.k));
@@ -213,45 +288,64 @@ function nav() {
 function go(v) { S.view = v; S.q = ''; S.f = {}; S.page = 1; S.sort = {k: 'created_at', d: -1}; nav(); v === 'dashboard' ? dash() : v === 'settings' ? settings() : list(); }
 
 /* ---------- dashboard ---------- */
-function since() {
-  const d = today();
-  return {all: '', month: d.slice(0, 8) + '01', '30': new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10), year: d.slice(0, 4) + '-01-01'}[S.period];
+function range() {
+  const d = today(), p = S.period;
+  return p === 'custom' ? [S.dfrom || '', S.dto || ''] : {all: ['', ''], month: [d.slice(0, 8) + '01', ''], '30': [addDays(-30), ''], year: [d.slice(0, 4) + '-01-01', '']}[p];
 }
+const inR = (x, k, [a, b]) => (!a || (x[k] || '') >= a) && (!b || (x[k] || '') <= b);
 async function dash() {
-  $('#main').innerHTML = '<h1>Dashboard</h1><p class="mu">Loading…</p>';
-  const [j, i] = await Promise.all([
-    sb.from('jobs').select('job_no,title,status,value,cost,received_date,customer_id,created_at').is('deleted_at', null),
-    sb.from('invoices').select('amount,paid,issue_date').is('deleted_at', null)]);
-  const lim = since(), allInv = i.data || [];
-  const jobs = (j.data || []).filter(x => !lim || (x.received_date || '') >= lim), inv = allInv.filter(x => !lim || (x.issue_date || '') >= lim);
-  const done = S.statuses.slice(-3), sum = (a, k) => a.reduce((t, x) => t + +x[k], 0);
-  const billed = sum(inv, 'amount'), got = sum(inv, 'paid');
-  const open = jobs.filter(x => !done.includes(x.status)).length;
-  const card = (ico, l, v) => `<div class="card stat"><i>${ic(ico, 20)}</i><div><span class="mu">${l}</span><b>${v}</b></div></div>`;
+  $('#main').innerHTML = '<h1>Dashboard</h1><div class="sk"></div><div class="sk"></div><div class="sk" style="height:140px"></div>';
+  const [j, i, q] = await Promise.all([
+    sb.from('jobs').select('job_no,title,status,value,labour_cost,material_cost,transport_cost,other_cost,received_date,customer_id,created_at').is('deleted_at', null),
+    sb.from('invoices').select('amount,paid,issue_date,customer_id').is('deleted_at', null),
+    sb.from('quotations').select('status,quote_date,customer_id').is('deleted_at', null)]);
+  const R = range(), cu = S.dcust || '', ok = (x, k) => inR(x, k, R) && (!cu || x.customer_id === cu);
+  const jobs = (j.data || []).filter(x => ok(x, 'received_date')), inv = (i.data || []).filter(x => ok(x, 'issue_date')), qs = (q.data || []).filter(x => ok(x, 'quote_date'));
+  const allInv = (i.data || []).filter(x => !cu || x.customer_id === cu);
+  const done = S.statuses.slice(-3), sum = (a, k) => a.reduce((t, x) => t + +x[k], 0), cost = a => a.reduce((t, x) => t + jcost(x), 0);
+  const billed = sum(inv, 'amount'), got = sum(inv, 'paid'), dj = jobs.filter(x => done.includes(x.status)), open = jobs.length - dj.length;
+  const pq = qs.filter(x => ['Draft','Sent'].includes(x.status)).length, ap = qs.filter(x => x.status === 'Approved').length;
+  const rate = billed ? Math.min(100, Math.round(got / billed * 100)) : 0, conv = qs.length ? Math.round(ap / qs.length * 100) : 0;
+  const card = (ico, l, n, f, c) => `<div class="card stat"><i style="background:${c}">${ic(ico, 20)}</i><div><span class="mu">${l}</span><b data-n="${n}" data-f="${f}">0</b></div></div>`;
   const mx = Math.max(1, ...S.statuses.map(s => jobs.filter(x => x.status === s).length));
-  const bars = S.statuses.map(s => {const n = jobs.filter(x => x.status === s).length; return `<div class="bar"><span>${esc(s)}</span><div><i style="width:${n / mx * 100}%;background:hsl(${hue(s)} 75% 50%)"></i></div><b>${n}</b></div>`}).join('');
-  const months = [...Array(6)].map((_, k) => {const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 5 + k); return d.toISOString().slice(0, 7)});
-  const mv = months.map(m => [sum(allInv.filter(x => (x.issue_date || '').startsWith(m)), 'amount'), sum(allInv.filter(x => (x.issue_date || '').startsWith(m)), 'paid')]);
-  const mm = Math.max(1, ...mv.flat());
-  const cols = months.map((m, k) => `<div><div class="b"><i style="height:${mv[k][0] / mm * 100}%;background:var(--bl)"></i><i style="height:${mv[k][1] / mm * 100}%;background:#10b981"></i></div>${new Date(m + '-02').toLocaleString('en', {month: 'short'})}</div>`).join('');
-  const recent = jobs.sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 5);
-  const rec = recent.length ? '<table><tbody>' + recent.map(r => `<tr><td>${pad('J-', r.job_no)}</td><td>${esc(r.title)}</td><td>${esc(cname(r.customer_id))}</td><td>${pill(r.status)}</td></tr>`).join('') + '</tbody></table>' : '<p class="empty">No jobs in this period.</p>';
+  const bars = S.statuses.map(s => { const n = jobs.filter(x => x.status === s).length; return `<div class="bar"><span>${esc(s)}</span><div><i style="width:0;background:hsl(${hue(s)} 75% 50%)" data-w="${n / mx * 100}%"></i></div><b>${n}</b></div>`; }).join('');
+  const months = [...Array(6)].map((_, k) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 5 + k); return d.toISOString().slice(0, 7); });
+  const mv = months.map(m => { const a = allInv.filter(x => (x.issue_date || '').startsWith(m)); return [sum(a, 'amount'), sum(a, 'paid')]; }), mm = Math.max(1, ...mv.flat());
+  const cols = months.map((m, k) => `<div><div class="b"><i style="height:0;background:var(--bl)" data-h="${mv[k][0] / mm * 100}%"></i><i style="height:0;background:#10b981" data-h="${mv[k][1] / mm * 100}%"></i></div>${new Date(m + '-02').toLocaleString('en', {month: 'short'})}</div>`).join('');
+  const donut = (p, l, c) => `<div class="ring"><svg viewBox="0 0 100 100" width="132" height="132"><circle cx="50" cy="50" r="42" fill="none" stroke="var(--bd)" stroke-width="9"/><circle class="arc" cx="50" cy="50" r="42" fill="none" stroke="${c}" stroke-width="9" stroke-linecap="round" stroke-dasharray="263.9" stroke-dashoffset="263.9" data-o="${263.9 * (1 - p / 100)}" transform="rotate(-90 50 50)"/><text x="50" y="56" text-anchor="middle" font-size="20" font-weight="800" fill="currentColor">${p}%</text></svg><div class="mu">${l}</div></div>`;
+  const tc = {}; inv.forEach(x => { const c = x.customer_id || '-'; tc[c] = tc[c] || {a: 0, p: 0}; tc[c].a += +x.amount; tc[c].p += +x.paid; });
+  const top = Object.entries(tc).sort((a, b) => b[1].a - a[1].a).slice(0, 5);
+  const topH = top.length ? '<table><thead><tr><th>Customer</th><th class="a">Invoiced</th><th class="a">Outstanding</th></tr></thead><tbody>' + top.map(([c, v]) => `<tr><td>${esc(cname(c) || 'No customer')}</td><td class="a">${money(v.a)}</td><td class="a">${money(v.a - v.p)}</td></tr>`).join('') + '</tbody></table>' : '<div class="empty">No invoices in this period.</div>';
+  const recent = jobs.slice().sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 5);
+  const rec = recent.length ? '<table><tbody>' + recent.map(r => `<tr><td>${pad('J-', r.job_no)}</td><td>${esc(r.title)}</td><td>${esc(cname(r.customer_id))}</td><td>${pill(r.status)}</td><td class="a">${profit(r.value, jcost(r))}</td></tr>`).join('') + '</tbody></table>' : '<div class="empty">No jobs in this period.</div>';
+  const pd = [['all','All time'],['year','This year'],['month','This month'],['30','Last 30 days'],['custom','Custom range']];
   $('#main').innerHTML = `<div class="ph"><div><h1>Hello, ${esc(S.user)}</h1><p class="mu" style="margin:2px 0 0">Here is how the business looks right now.</p></div>
-    <div class="acts"><select id="pd" aria-label="Period"><option value="all">All time</option><option value="year">This year</option><option value="month">This month</option><option value="30">Last 30 days</option></select></div></div>
-    <div class="stats">${card('job','Open jobs',open)}${card('file','Total invoiced',money(billed))}${card('cash','Money received',money(got))}${card('clock','Outstanding',money(billed - got))}${card('cog','Job costs',money(sum(jobs, 'cost')))}</div>
+    <div class="acts"><button class="btn g" data-q="quotations">${ic('quote', 16)} New quotation</button><button class="btn g" data-q="jobs">${ic('job', 16)} New job</button><button class="btn" data-q="invoices">${ic('file', 16)} New invoice</button></div></div>
+    <div class="card fl"><div><label>Period</label><select id="pd">${pd.map(x => `<option value="${x[0]}"${S.period === x[0] ? ' selected' : ''}>${x[1]}</option>`).join('')}</select></div>
+    ${S.period === 'custom' ? `<div><label>From</label><input type="date" id="d1" value="${S.dfrom}"></div><div><label>To</label><input type="date" id="d2" value="${S.dto}"></div>` : ''}
+    <div><label>Customer</label><select id="dc"><option value="">All customers</option>${S.cust.map(c => `<option value="${c.id}"${c.id === cu ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div></div>
+    <div class="stats">${card('job','Open jobs',open,'i','linear-gradient(135deg,#2563eb,#0ea5e9)')}${card('file','Total invoiced',billed,'m','linear-gradient(135deg,#7c3aed,#2563eb)')}${card('cash','Money received',got,'m','linear-gradient(135deg,#059669,#10b981)')}${card('clock','Outstanding',billed - got,'m','linear-gradient(135deg,#ea580c,#f59e0b)')}${card('trend','Profit, completed jobs',sum(dj, 'value') - cost(dj),'m','linear-gradient(135deg,#0891b2,#06b6d4)')}${card('quote','Quotes awaiting approval',pq,'i','linear-gradient(135deg,#db2777,#f43f5e)')}</div>
     <div class="grid2"><div class="card"><h2>Jobs by status</h2>${bars}</div>
     <div class="card"><h2>Invoiced vs received, last 6 months</h2><div class="cols">${cols}</div><div class="lg"><span style="--c:var(--bl)">Invoiced</span><span style="--c:#10b981">Received</span></div></div></div>
+    <div class="grid2"><div class="card"><h2>Performance</h2><div class="rings">${donut(rate, 'Collection rate', '#10b981')}${donut(conv, 'Quotes approved', '#2563eb')}</div></div>
+    <div class="card tw" style="padding:20px 0 0"><h2 style="padding:0 20px 8px">Top customers</h2>${topH}</div></div>
     <div class="card tw"><div style="padding:18px 20px 6px"><h2>Recent jobs</h2></div>${rec}</div>`;
-  $('#pd').value = S.period; $('#pd').onchange = e => { S.period = e.target.value; dash(); };
+  const re = () => dash();
+  $('#pd').onchange = e => { S.period = e.target.value; re(); };
+  $('#dc').onchange = e => { S.dcust = e.target.value; re(); };
+  if ($('#d1')) { $('#d1').onchange = e => { S.dfrom = e.target.value; re(); }; $('#d2').onchange = e => { S.dto = e.target.value; re(); }; }
+  document.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { go(b.dataset.q); form(); });
+  runAnim();
 }
 
 /* ---------- list view with filters ---------- */
 async function list() {
   const m = M[S.view];
-  $('#main').innerHTML = `<div class="ph"><div><h1>${m.label}</h1><div class="sum" id="sub"></div></div>
-    <div class="acts"><button class="btn g" id="ex">${ic('dl', 16)} Export CSV</button><button class="btn" id="add">${ic('plus', 16)} Add ${m.one}</button></div></div>
-    <div class="card fl" id="fl"></div><div class="card tw" id="tb"><p class="empty">Loading…</p></div><div class="pg" id="pg"></div>`;
-  $('#add').onclick = () => form(); $('#ex').onclick = exportCsv;
+  $('#main').innerHTML = `<div class="ph"><div class="hh"><span class="hi">${ic({customers:'users',quotations:'quote',jobs:'job',invoices:'file'}[S.view], 22)}</span><div><h1>${m.label}</h1><div class="sum" id="sub"></div></div></div>
+    <div class="acts"><button class="btn g" id="tp">${ic('dl', 16)} Excel template</button><button class="btn g" id="im">${ic('up', 16)} Import Excel</button><button class="btn g" id="ex">${ic('dl', 16)} Export Excel</button><input type="file" id="xf" accept=".xlsx,.xls,.csv" class="hide"><button class="btn" id="add">${ic('plus', 16)} Add ${m.one}</button></div></div>
+    <div class="card fl" id="fl"></div><div class="card tw" id="tb" style="padding:8px 18px"><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div></div><div class="pg" id="pg"></div>`;
+  $('#add').onclick = () => form(); $('#ex').onclick = exportXlsx; $('#tp').onclick = template; $('#im').onclick = () => $('#xf').click();
+  $('#xf').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) importXlsx(f); };
   filterUI();
   const {data, error} = await sb.from(S.view).select('*').is('deleted_at', null).order('created_at', {ascending: false});
   if (error) { $('#tb').innerHTML = `<p class="empty">Could not load data: ${esc(error.message)}</p>`; return; }
@@ -261,14 +355,21 @@ function filterUI() {
   const m = M[S.view], f = S.f;
   const sel = (id, l, o) => `<div><label>${l}</label><select id="${id}"><option value="">All</option>${o.map(x => `<option value="${esc(x[0])}"${f[id] === x[0] ? ' selected' : ''}>${esc(x[1])}</option>`).join('')}</select></div>`;
   let h = `<div class="sb">${ic('search', 16)}<input id="q" placeholder="Search ${m.label.toLowerCase()}" aria-label="Search" value="${esc(S.q)}"></div>`;
-  if (m.flt.includes('status')) h += sel('status', 'Status', (S.view === 'jobs' ? S.statuses : ['Unpaid','Partial','Paid','Overdue']).map(x => [x, x]));
+  if (m.flt.includes('status')) h += sel('status', 'Status', (S.view === 'jobs' ? S.statuses : S.view === 'quotations' ? QST : ['Unpaid','Partial','Paid','Overdue']).map(x => [x, x]));
   if (m.flt.includes('priority')) h += sel('priority', 'Priority', ['Low','Normal','High','Urgent'].map(x => [x, x]));
   if (m.flt.includes('cust')) h += sel('cust', 'Customer', S.cust.map(c => [c.id, c.name]));
+  if (S.view === 'jobs') h += sel('pf', 'Profit', [['p','Profitable'],['l','Loss-making']]);
   if (m.dt) h += `<div class="dr"><label>From</label><input type="date" id="from" value="${f.from || ''}"></div><div class="dr"><label>To</label><input type="date" id="to" value="${f.to || ''}"></div>`;
-  h += '<button class="btn g" id="clr">Clear filters</button>';
+  if (m.vk) h += `<div class="dr"><label>Min value</label><input type="number" id="min" min="0" placeholder="0" value="${f.min ?? ''}"></div><div class="dr"><label>Max value</label><input type="number" id="max" min="0" placeholder="Any" value="${f.max ?? ''}"></div>`;
+  const hid = S.hid[S.view] || [];
+  h += `<div class="cmw"><button class="btn g" id="cl">${ic('cols', 16)} Columns</button><div class="card cm hide" id="cm">${m.cols.map(c => `<label><input type="checkbox" data-col="${c[0]}"${hid.includes(c[0]) ? '' : ' checked'}>${c[1]}</label>`).join('')}</div></div><button class="btn g" id="clr">${ic('x', 16)} Clear</button>`;
   $('#fl').innerHTML = h;
   $('#q').oninput = e => { S.q = e.target.value.toLowerCase(); S.page = 1; draw(); };
-  ['status','priority','cust','from','to'].forEach(id => { const e = $('#' + id); if (e) e.onchange = () => { S.f[id] = e.value; S.page = 1; draw(); }; });
+  ['status','priority','cust','from','to','min','max','pf'].forEach(id => { const e = $('#' + id); if (e) e.oninput = () => { S.f[id] = e.value; S.page = 1; draw(); }; });
+  $('#cl').onclick = () => $('#cm').classList.toggle('hide');
+  document.querySelectorAll('[data-col]').forEach(c => c.onchange = () => {
+    const k = c.dataset.col, a = new Set(S.hid[S.view] || []); c.checked ? a.delete(k) : a.add(k); S.hid[S.view] = [...a];
+    try { localStorage.setItem('hid', JSON.stringify(S.hid)); } catch (e) {} draw(); });
   $('#clr').onclick = () => { S.f = {}; S.q = ''; S.page = 1; filterUI(); draw(); };
 }
 function filt(r) {
@@ -280,60 +381,189 @@ function filt(r) {
   const d = m.dt ? r[m.dt] : null;
   if (f.from && (!d || d < f.from)) return false;
   if (f.to && (!d || d > f.to)) return false;
+  if (m.vk) { if (f.min !== undefined && f.min !== '' && +r[m.vk] < +f.min) return false; if (f.max !== undefined && f.max !== '' && +r[m.vk] > +f.max) return false; }
+  if (f.pf && (f.pf === 'p' ? r.value - jcost(r) < 0 : r.value - jcost(r) >= 0)) return false;
   return true;
 }
-const val = (r, k) => k === 's' ? invStatus(r) : k === 'customer_id' ? cname(r.customer_id) : r[k];
+const val = (r, k) => k === 's' ? invStatus(r) : k === 'customer_id' ? cname(r.customer_id) : k === 'job_id' ? jno(r.job_id) : k === 'est' ? r.amount - jcost(r) : k === 'profit' ? r.value - jcost(r) : r[k];
 function draw() {
-  const m = M[S.view], {k, d} = S.sort;
+  const m = M[S.view], {k, d} = S.sort, hid = S.hid[S.view] || [], cols = m.cols.filter(c => !hid.includes(c[0]));
   const rows = S.rows.filter(filt).sort((a, b) => { const x = val(a, k), y = val(b, k);
     return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x ?? '').localeCompare(String(y ?? ''))) * d; });
   const tot = c => rows.reduce((a, r) => a + +r[c], 0), ch = t => `<span>${t}</span>`;
-  $('#sub').innerHTML = ch(rows.length + ' of ' + S.rows.length) + (S.view === 'jobs' ? ch('Value ' + money(tot('value'))) + ch('Cost ' + money(tot('cost')))
+  const tcost = rows.reduce((a, r) => a + jcost(r), 0);
+  $('#sub').innerHTML = ch(rows.length + ' of ' + S.rows.length) + (S.view === 'jobs' ? ch('Value ' + money(tot('value'))) + ch('Cost ' + money(tcost)) + ch('Profit ' + money(tot('value') - tcost))
+    : S.view === 'quotations' ? ch('Quoted ' + money(tot('amount'))) + ch('Est. profit ' + money(tot('amount') - tcost))
     : S.view === 'invoices' ? ch('Invoiced ' + money(tot('amount'))) + ch('Received ' + money(tot('paid'))) + ch('Outstanding ' + money(tot('amount') - tot('paid'))) : '');
-  const pages = Math.max(1, Math.ceil(rows.length / PS)); S.page = Math.min(S.page, pages);
-  const vis = rows.slice((S.page - 1) * PS, S.page * PS);
-  if (!vis.length) { $('#tb').innerHTML = `<p class="empty">${S.rows.length ? 'No records match these filters. Try clearing them.' : 'No ' + m.label.toLowerCase() + ' yet. Use “Add ' + m.one + '” to create the first one.'}</p>`; $('#pg').innerHTML = ''; return; }
-  $('#tb').innerHTML = '<table><thead><tr>' + m.cols.map(c => `<th data-s="${c[0]}"${c[3] ? ' class="a"' : ''}>${c[1]}${k === c[0] ? (d > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '<th></th></tr></thead><tbody>'
-    + vis.map(r => '<tr>' + m.cols.map(c => `<td${c[3] ? ' class="a"' : ''}>${c[2] ? c[2](r) : esc(r[c[0]])}</td>`).join('')
-      + `<td class="a"><button class="btn g s" data-e="${r.id}">Edit</button> <button class="btn g s" data-d="${r.id}">Delete</button></td></tr>`).join('') + '</tbody></table>';
-  $('#pg').innerHTML = pages > 1 ? `<button class="btn g s" id="pv"${S.page < 2 ? ' disabled' : ''}>Previous</button><span class="mu">Page ${S.page} of ${pages}</span><button class="btn g s" id="nx"${S.page >= pages ? ' disabled' : ''}>Next</button>` : '';
+  const pages = Math.max(1, Math.ceil(rows.length / S.ps)); S.page = Math.min(S.page, pages);
+  const vis = rows.slice((S.page - 1) * S.ps, S.page * S.ps);
+  if (!vis.length) { $('#tb').innerHTML = `<div class="empty">${ic('filter', 36)}<br>${S.rows.length ? 'No records match these filters. Try clearing them.' : 'No ' + m.label.toLowerCase() + ' yet. Use “Add ' + m.one + '” to create the first one.'}</div>`; $('#pg').innerHTML = ''; return; }
+  $('#tb').style.padding = '0';
+  $('#tb').innerHTML = '<table><thead><tr>' + cols.map(c => `<th data-s="${c[0]}"${c[3] ? ' class="a"' : ''}>${c[1]}${k === c[0] ? (d > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '<th></th></tr></thead><tbody>'
+    + vis.map(r => '<tr>' + cols.map(c => `<td${c[3] ? ' class="a"' : ''}>${c[2] ? c[2](r) : esc(r[c[0]])}</td>`).join('')
+      + `<td class="a">${acts(r)}<button class="btn g s" title="Edit" aria-label="Edit" data-e="${r.id}">${ic('edit', 15)}</button> <button class="btn g s" title="Delete" aria-label="Delete" data-d="${r.id}">${ic('trash', 15)}</button></td></tr>`).join('') + '</tbody></table>';
+  $('#pg').innerHTML = `<select id="ps" aria-label="Rows per page">${[10,15,25,50,100].map(n => `<option value="${n}"${S.ps === n ? ' selected' : ''}>${n} per page</option>`).join('')}</select>`
+    + (pages > 1 ? `<button class="btn g s" id="pv"${S.page < 2 ? ' disabled' : ''}>Previous</button><span class="mu">Page ${S.page} of ${pages}</span><button class="btn g s" id="nx"${S.page >= pages ? ' disabled' : ''}>Next</button>` : '');
+  $('#ps').onchange = e => { S.ps = +e.target.value; S.page = 1; draw(); };
   if (pages > 1) { $('#pv').onclick = () => { S.page--; draw(); }; $('#nx').onclick = () => { S.page++; draw(); }; }
   document.querySelectorAll('th[data-s]').forEach(t => t.onclick = () => { S.sort = {k: t.dataset.s, d: S.sort.k === t.dataset.s ? -S.sort.d : 1}; draw(); });
   document.querySelectorAll('[data-e]').forEach(b => b.onclick = () => form(S.rows.find(r => r.id === b.dataset.e)));
   document.querySelectorAll('[data-d]').forEach(b => b.onclick = () => del(b.dataset.d));
+  document.querySelectorAll('[data-c]').forEach(b => b.onclick = () => completeJob(b.dataset.c));
+  document.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { go('invoices'); form(null, {job_id: b.dataset.i}); });
+  document.querySelectorAll('[data-ap]').forEach(b => b.onclick = () => setQuote(b.dataset.ap, 'Approved'));
+  document.querySelectorAll('[data-rj]').forEach(b => b.onclick = () => setQuote(b.dataset.rj, 'Not Approved'));
 }
-function exportCsv() {
-  const m = M[S.view], rows = S.rows.filter(filt), cell = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
-  const csv = [m.cols.map(c => cell(c[1])).join(',')].concat(rows.map(r => m.cols.map(c => cell(c[2] ? txt(c[2](r)) : r[c[0]])).join(','))).join('\n');
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], {type: 'text/csv'}));
-  a.download = S.view + '-' + today() + '.csv'; a.click(); toast('Exported ' + rows.length + ' rows');
+
+/* ---------- Excel: template, export, import/update ---------- */
+const hdr = f => f[2] === 'cust' ? 'Customer' : f[2] === 'job' ? 'Job No' : f[1];
+const xlHeads = m => (m.no ? [m.no[0]] : []).concat(m.f.map(hdr));
+function xlRow(m, r) {
+  const o = {};
+  if (m.no) o[m.no[0]] = pad(m.no[2], r[m.no[1]]);
+  m.f.forEach(f => { o[hdr(f)] = f[2] === 'cust' ? cname(r[f[0]]) : f[2] === 'job' ? jno(r[f[0]]) : r[f[0]] ?? ''; });
+  return o;
+}
+function saveXlsx(sheets, name) {
+  const wb = XLSX.utils.book_new();
+  sheets.forEach(([n, rows, heads]) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows, heads ? {header: heads} : undefined), n));
+  XLSX.writeFile(wb, name);
+}
+function exportXlsx() {
+  const m = M[S.view], rows = S.rows.filter(filt).map(r => xlRow(m, r));
+  if (!rows.length) return toast('Nothing to export');
+  saveXlsx([[m.label, rows, xlHeads(m)]], S.view + '-' + today() + '.xlsx'); toast('Exported ' + rows.length + ' rows. Edit and re-import to update.');
+}
+function template() {
+  const m = M[S.view], ex = {};
+  if (m.no) ex[m.no[0]] = '';
+  m.f.forEach(f => { const t = f[2]; ex[hdr(f)] = t === 'cust' ? (S.cust[0] ? S.cust[0].name : 'EXAMPLE Customer') : t === 'job' ? (S.jobs[0] ? pad('J-', S.jobs[0].job_no) : 'J-0001')
+    : t === 'date' ? today() : t === 'number' ? 1000 : t === 'status' ? S.statuses[0] : t.startsWith('select:') ? t.slice(7).split(',')[0] : 'EXAMPLE ' + f[1]; });
+  const help = ['How to use this sheet', '1. Fill the Data sheet, one record per row. Rows that contain the word EXAMPLE are ignored.',
+    m.no ? '2. To UPDATE an existing record keep its ' + m.no[0] + '. Leave it empty to add a new record.' : '2. A row with the same Name as an existing customer updates it. Otherwise a new customer is added.',
+    '3. Dates as YYYY-MM-DD. Money as plain numbers.', '4. Customer names that do not exist yet are created automatically.',
+    '5. Only the columns present in your sheet are updated.'].map(x => ({Instructions: x}));
+  saveXlsx([['Data', [ex], xlHeads(m)], ['How to use', help]], S.view + '-template.xlsx');
+}
+async function importXlsx(file) {
+  const m = M[S.view];
+  let rows;
+  try { const wb = XLSX.read(await file.arrayBuffer(), {type: 'array', cellDates: true}); rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval: ''}); }
+  catch (e) { return toast('Could not read this Excel file'); }
+  rows = rows.map(r => Object.fromEntries(Object.entries(r).map(([k, v]) => [k.trim().toLowerCase(), v])))
+    .filter(r => !Object.values(r).some(v => typeof v === 'string' && v.startsWith('EXAMPLE')) && Object.values(r).some(v => v !== ''));
+  if (!rows.length) return toast('No data rows found');
+  if (!confirm('Import ' + rows.length + ' rows into ' + m.label + '? Existing records with the same ' + (m.no ? m.no[0] : 'name') + ' will be updated.')) return;
+  toast('Importing…');
+  const {data: ex} = await sb.from(S.view).select('*').is('deleted_at', null);
+  let add = 0, upd = 0; const bad = [];
+  for (const [n, r] of rows.entries()) {
+    try {
+      const o = {};
+      for (const f of m.f) {
+        const h = hdr(f).toLowerCase(), t = f[2]; if (!(h in r)) continue;
+        let v = r[h];
+        if (t === 'cust') {
+          v = String(v).trim();
+          if (v) { let c = S.cust.find(x => x.name.toLowerCase() === v.toLowerCase());
+            if (!c) { const {data: nc, error} = await sb.from('customers').insert({name: v}).select('id,name').single(); if (error) throw error; c = nc; S.cust.push(c); }
+            v = c.id; } else v = null;
+        } else if (t === 'job') {
+          const num = parseInt(String(v).replace(/\D/g, ''), 10), jb = S.jobs.find(x => x.job_no === num);
+          if (!jb) throw new Error('Job ' + v + ' not found'); v = jb.id;
+        } else if (t === 'date') v = v instanceof Date ? new Date(v.getTime() + 12 * 36e5).toISOString().slice(0, 10) : (String(v).trim() || null);
+        else if (t === 'number') v = +v || 0;
+        else v = String(v).trim() || null;
+        o[f[0]] = v;
+      }
+      let e = null;
+      if (m.no) { const num = parseInt(String(r[m.no[0].toLowerCase()] ?? '').replace(/\D/g, ''), 10); if (num) e = ex.find(x => x[m.no[1]] === num); }
+      else e = ex.find(x => (x.name || '').toLowerCase() === String(o.name || '').toLowerCase());
+      for (const f of m.f) if (f[3] && !(e ? (o[f[0]] === undefined || o[f[0]]) : o[f[0]])) throw new Error(f[1] + ' is required');
+      if (S.view === 'invoices' && o.job_id) o.customer_id = S.jobs.find(x => x.id === o.job_id).customer_id;
+      if (e) {
+        m.f.forEach(f => { if ((f[2] === 'status' || f[2].startsWith('select:')) && o[f[0]] == null) delete o[f[0]]; });
+        const {error} = await sb.from(S.view).update(o).eq('id', e.id); if (error) throw error; upd++;
+      } else {
+        m.f.forEach(f => { if (o[f[0]] == null) o[f[0]] = f[2] === 'number' ? (S.view === 'customers' ? null : 0) : f[2] === 'status' ? S.statuses[0]
+          : f[2].startsWith('select:') ? (f[0] === 'priority' ? 'Normal' : f[2].slice(7).split(',')[0]) : /^(issue|received|quote)_date$/.test(f[0]) ? today() : null; });
+        const {error} = await sb.from(S.view).insert(o); if (error) throw error; add++;
+      }
+    } catch (err) { bad.push('Row ' + (n + 2) + ': ' + (err.message || err)); }
+  }
+  await loadCust(); await loadJobs(); list();
+  alert('Import finished.\nAdded: ' + add + '\nUpdated: ' + upd + '\nSkipped with errors: ' + bad.length + (bad.length ? '\n\n' + bad.slice(0, 8).join('\n') : ''));
 }
 
 /* ---------- add / edit ---------- */
+function acts(r) {
+  let h = '';
+  if (S.view === 'jobs') {
+    if (!['Completed','Invoiced','Paid'].includes(r.status)) h += `<button class="btn s" data-c="${r.id}">${ic('check', 14)} Complete</button> `;
+    if (['Completed','Invoiced'].includes(r.status)) h += `<button class="btn s" data-i="${r.id}">${ic('file', 14)} Invoice</button> `;
+  }
+  if (S.view === 'quotations') {
+    if (r.status !== 'Approved') h += `<button class="btn s" data-ap="${r.id}">${ic('check', 14)} Approve</button> `;
+    if (!['Approved','Not Approved'].includes(r.status)) h += `<button class="btn g s" data-rj="${r.id}">${ic('x', 14)} Not approved</button> `;
+  }
+  return h;
+}
+async function completeJob(id) {
+  const {error} = await sb.from('jobs').update({status: 'Completed', completion_date: today()}).eq('id', id);
+  if (error) return toast('Failed: ' + error.message);
+  await loadJobs(); toast('Job completed. You can now create the invoice.'); list();
+}
+async function setQuote(id, st) {
+  const {data, error} = await sb.from('quotations').update({status: st}).eq('id', id).select('job_id').single();
+  if (error) return toast('Failed: ' + error.message);
+  await loadJobs(); toast(st === 'Approved' ? 'Approved. Job ' + jno(data.job_id) + ' created.' : 'Marked as not approved'); list();
+}
 function input(f, v) {
   const [k, l, t, req] = f, val = v ?? '';
   let h;
   if (t === 'textarea') h = `<textarea name="${k}" rows="3">${esc(val)}</textarea>`;
   else if (t === 'cust') h = `<select name="${k}"><option value="">None</option>${S.cust.map(c => `<option value="${c.id}"${c.id === val ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}</select>`;
+  else if (t === 'job') h = `<select name="${k}" required><option value="">Select job number</option>${S.jobs.map(j => `<option value="${j.id}"${j.id === val ? ' selected' : ''}>${pad('J-', j.job_no)} - ${esc(j.title)}</option>`).join('')}</select>`;
   else if (t === 'status' || t.startsWith('select:')) {
     const o = t === 'status' ? S.statuses : t.slice(7).split(',');
     h = `<select name="${k}">${o.map(x => `<option${x === val ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
   } else h = `<input name="${k}" type="${t}"${t === 'number' ? ' step="0.01" min="0"' : ''} value="${esc(val)}"${req ? ' required' : ''}>`;
-  return `<div class="fld${t === 'textarea' ? ' full' : ''}"><label>${l}${req ? ' *' : ''}</label>${h}</div>`;
+  return `<div class="fld${t === 'textarea' ? ' full' : ''}"><label>${l.replace('LKR', S.cur)}${req ? ' *' : ''}</label>${h}</div>`;
 }
-function form(row) {
+function dflt(f) {
+  const t = f[2];
+  return t === 'status' ? S.statuses[0] : t.startsWith('select:') ? (f[0] === 'priority' ? 'Normal' : t.slice(7).split(',')[0])
+    : /^(issue|received|quote)_date$/.test(f[0]) ? today() : f[0] === 'due_date' ? addDays(S.terms) : f[0] === 'target_date' ? addDays(S.dur) : '';
+}
+function form(row, pre) {
   const m = M[S.view];
-  $('#df').innerHTML = `<h2>${row ? 'Edit' : 'Add'} ${m.one}</h2>` + m.f.map(f => input(f, row ? row[f[0]] : (f[2] === 'status' ? S.statuses[0] : f[2].startsWith('select:') ? 'Normal' : f[0] === 'issue_date' || f[0] === 'received_date' ? today() : ''))).join('')
+  $('#df').innerHTML = `<h2>${row ? 'Edit' : 'Add'} ${m.one}</h2>` + m.f.map(f => input(f, row ? row[f[0]] : pre && pre[f[0]] !== undefined ? pre[f[0]] : dflt(f))).join('')
     + `<div class="foot"><button type="button" class="btn g" id="cx">Cancel</button><button class="btn">Save ${m.one}</button></div>`;
   $('#cx').onclick = () => $('#dlg').close();
+  if (S.view === 'jobs' || S.view === 'quotations') {
+    const vk = S.view === 'jobs' ? 'value' : 'amount', box = document.createElement('div');
+    box.className = 'full card'; box.style.cssText = 'padding:12px 16px;display:flex;gap:20px;flex-wrap:wrap;font-weight:600';
+    $('#df .foot').before(box);
+    const calc = () => { const g = n => +($('#df [name=' + n + ']').value) || 0, c = g('labour_cost') + g('material_cost') + g('transport_cost') + g('other_cost'), v = g(vk);
+      box.innerHTML = `<span>Total cost ${money(c)}</span><span>Profit ${profit(v, c)}</span><span>Margin ${v ? ((v - c) / v * 100).toFixed(1) : 0}%</span>`; };
+    $('#df').oninput = calc; calc();
+  }
+  if (S.view === 'invoices') {
+    const js = $('#df [name=job_id]'), am = $('#df [name=amount]');
+    const fill = () => { const j = S.jobs.find(x => x.id === js.value); if (j && !(+am.value)) am.value = j.value; };
+    js.onchange = fill; if (!row) fill();
+  }
   $('#df').onsubmit = async e => {
     e.preventDefault();
     const fd = new FormData($('#df')), o = {};
     m.f.forEach(([k,, t]) => { const v = fd.get(k); o[k] = v === '' || v === null ? (t === 'number' && S.view !== 'customers' ? 0 : null) : t === 'number' ? +v : v; });
+    const jb = S.view === 'invoices' ? S.jobs.find(x => x.id === o.job_id) : null;
+    if (S.view === 'invoices') { if (!jb) return toast('Select a job'); o.customer_id = jb.customer_id; }
     const {error} = await (row ? sb.from(S.view).update(o).eq('id', row.id) : sb.from(S.view).insert(o));
     if (error) return toast('Save failed: ' + error.message);
+    if (jb && !row && !['Invoiced','Paid'].includes(jb.status) && S.statuses.includes('Invoiced')) await sb.from('jobs').update({status: 'Invoiced'}).eq('id', jb.id);
     $('#dlg').close(); toast(row ? 'Saved' : 'Created');
-    if (S.view === 'customers') await loadCust();
+    if (S.view === 'customers') await loadCust(); else await loadJobs();
     list();
   };
   $('#dlg').showModal();
@@ -342,15 +572,29 @@ async function del(id) {
   if (!confirm('Delete this ' + M[S.view].one + '? It will be hidden but kept in the database.')) return;
   const {error} = await sb.from(S.view).update({deleted_at: new Date().toISOString()}).eq('id', id);
   if (error) return toast('Delete failed: ' + error.message);
-  toast('Deleted'); if (S.view === 'customers') await loadCust(); list();
+  toast('Deleted'); if (S.view === 'customers') await loadCust(); else await loadJobs(); list();
 }
 
 /* ---------- settings ---------- */
 function settings() {
-  $('#main').innerHTML = `<div class="ph"><div><h1>Settings</h1><p class="mu" style="margin:2px 0 0">Currency: LKR. Time zone: Asia/Colombo.</p></div></div>
-    <div class="card" style="padding:22px;max-width:560px"><h2>Job statuses</h2><p class="mu" style="margin:4px 0 12px">One status per line, in workflow order. Add, rename or remove any of them.</p>
-    <textarea id="ss" rows="10">${esc(S.statuses.join('\n'))}</textarea>
-    <div class="foot" style="margin-top:14px"><button class="btn" id="sv">Save statuses</button></div></div>`;
+  $('#main').innerHTML = `<div class="ph"><div class="hh"><span class="hi">${ic('cog', 22)}</span><div><h1>Settings</h1><p class="mu" style="margin:2px 0 0">Company, defaults and workflow.</p></div></div></div>
+    <div class="grid2" style="align-items:start"><div class="card"><h2>Company and defaults</h2>
+      <div class="fld"><label>Company name</label><input id="s1" value="${esc(S.co)}"></div>
+      <div class="fld"><label>Currency code</label><input id="s2" maxlength="5" value="${esc(S.cur)}"></div>
+      <div class="fld"><label>Default payment terms (days until invoice is due)</label><input id="s3" type="number" min="0" value="${S.terms}"></div>
+      <div class="fld"><label>Default job duration (days until target date)</label><input id="s4" type="number" min="0" value="${S.dur}"></div>
+      <div class="fld"><label>Rows per page</label><select id="s5">${[10,15,25,50,100].map(n => `<option${S.ps === n ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
+      <div class="foot" style="margin-top:16px"><button class="btn" id="sp">${ic('check', 16)} Save preferences</button></div></div>
+    <div class="card"><h2>Job statuses</h2><p class="mu" style="margin:4px 0 0">One status per line, in workflow order. The last three count as finished.</p>
+      <div class="fld"><textarea id="ss" rows="11">${esc(S.statuses.join('\n'))}</textarea></div>
+      <div class="foot" style="margin-top:16px"><button class="btn" id="sv">${ic('check', 16)} Save statuses</button></div></div></div>
+    <div class="card" style="padding:20px;margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><h2>Account</h2><span class="mu">Signed in as ${esc(S.user)}</span></div><button class="btn g" id="rc">Reset table column layout</button></div>`;
+  $('#sp').onclick = async () => {
+    const v = {co: $('#s1').value.trim() || 'ConnectPro', cur: $('#s2').value.trim().toUpperCase() || 'LKR', terms: +$('#s3').value || 0, dur: +$('#s4').value || 0, ps: +$('#s5').value || 15};
+    const {error} = await sb.from('app_settings').upsert({key: 'prefs', value: v, updated_at: new Date().toISOString()});
+    if (error) return toast('Save failed: ' + error.message);
+    Object.assign(S, v); nav(); toast('Preferences saved');
+  };
   $('#sv').onclick = async () => {
     const v = $('#ss').value.split('\n').map(x => x.trim()).filter(Boolean);
     if (!v.length) return toast('Add at least one status');
@@ -358,6 +602,7 @@ function settings() {
     if (error) return toast('Save failed: ' + error.message);
     S.statuses = v; toast('Statuses saved');
   };
+  $('#rc').onclick = () => { S.hid = {}; try { localStorage.removeItem('hid'); } catch (e) {} toast('Column layout reset'); };
 }
 </script>
 </body>
