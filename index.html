@@ -751,7 +751,9 @@ function form(row, pre) {
     const jt = $('#df [name=job_type]'), stt = $('#df [name=status]'), hint = document.createElement('div');
     hint.className = 'full mu'; hint.style.fontSize = '13px'; jt.closest('.fld').after(hint);
     const upd = () => { hint.innerHTML = jt.value === 'Quotation' && !(row && row.quotation_id) ? ic('quote', 14) + ' A draft quotation will be created automatically in the Quotations tab.' : ''; };
-    jt.onchange = () => { upd(); if (!row && jt.value === 'Quotation' && S.statuses.includes('Quotation')) stt.value = 'Quotation'; };
+    jt.onchange = () => { upd();
+      if (jt.value === 'Quotation' && S.statuses.includes('Quotation') && !(row && row.quotation_id) && stt.value === S.statuses[0]) stt.value = 'Quotation';
+      else if (jt.value !== 'Quotation' && stt.value === 'Quotation' && !(row && row.quotation_id)) stt.value = S.statuses[0]; };
     upd();
     const mf = $('#df [name=maintenance_id]'), mfld = mf.closest('.fld');
     const sync = () => { const on = jt.value === 'Maintenance'; mfld.style.display = on ? '' : 'none'; if (!on) mf.value = ''; };
