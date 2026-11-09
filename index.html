@@ -723,6 +723,7 @@ async function custCard(id) {
 }
 /* ---------- line items editor, conversion, payments, printing ---------- */
 const KINDS = ['Material','Labour','Transport','Other'];
+const krank = k => { const i = KINDS.indexOf(k); return i < 0 ? 3 : i; };
 function itemsEditor(rows, onChange) {
   const w = document.createElement('div'); w.className = 'full';
   w.innerHTML = `<h3 style="margin-bottom:8px">Items, labour and costs</h3><div class="ct tw li"><table><thead><tr><th>Type</th><th>Description</th><th>Qty</th><th>Unit</th><th>Unit cost</th><th>Unit price</th><th class="a">Total</th><th></th></tr></thead><tbody></tbody></table></div>
@@ -796,41 +797,54 @@ async function payDialog(id) {
 }
 const longDate = d => { if (!d) return ''; const x = new Date(String(d).slice(0, 10) + 'T12:00:00'), n = x.getDate(), sf = n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'; return n + sf + ' Of ' + x.toLocaleString('en', {month: 'long'}) + ' ' + x.getFullYear(); };
 const f2 = n => Number(n || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const shortDate = d => { if (!d) return ''; const x = String(d).slice(0, 10).split('-'); return x.length === 3 ? x[2] + '/' + x[1] + '/' + x[0] : String(d); };
 async function printDoc(type, id) {
   const d = S.rows.find(x => x.id === id); if (!d) return;
   const [it, pay] = await Promise.all([sb.from('line_items').select('*').eq('parent_type', type).eq('parent_id', id).order('sort'),
     type === 'invoice' ? sb.from('payments').select('*').eq('invoice_id', id).is('deleted_at', null).order('pay_date') : Promise.resolve({data: []})]);
   const inv = type === 'invoice', c = S.cust.find(x => x.id === d.customer_id) || {}, j = S.jobs.find(x => x.id === d.job_id);
-  const lines = (it.data || []).length ? it.data : [{description: d.title || (j && j.title) || 'Service', quantity: 1, unit: 'Item', unit_price: d.amount}];
+  const hasItems = (it.data || []).length > 0;
+  const lines = hasItems ? it.data.slice().sort((a, b) => krank(a.kind) - krank(b.kind) || (a.sort || 0) - (b.sort || 0))
+    : [{kind: '', description: d.title || (j && j.title) || 'Service', quantity: 1, unit: 'Item', unit_price: d.amount}];
   const sub = lines.reduce((a, x) => a + x.quantity * x.unit_price, 0), disc = +d.discount || 0, total = +d.amount || 0, tax = total - (sub - disc);
   const paid = (pay.data || []).reduce((a, p) => a + (+p.amount || 0), 0), no = inv ? inn(d) : qn(d);
   const date = inv ? d.issue_date : d.quote_date, second = inv ? d.due_date : (d.valid_until || (date ? new Date(new Date(date + 'T12:00:00').getTime() + 30 * 864e5).toISOString().slice(0, 10) : ''));
   const loc = (inv ? (j && j.site) || '' : d.site) || '', jdate = inv ? ((j && j.completion_date) || d.issue_date || '') : '', jnum = inv && j ? pad('J-', j.job_no) : '';
   const tel = S.phone || '+9475 4276105 / +9470 6651029 (Whatsapp)', mail = S.email || 'connectprotechnologies11@gmail.com';
   const pn = S.prepName || 'Kanishka Kumarasinghe', pt = S.prepTitle || 'Executive', an = S.authName || 'Hansana Milinda', at = S.authTitle || 'Owner';
-  const remark = d.notes || S.remark || (inv ? 'Professional services provided as per the agreed requirements. The invoice includes charges for the services completed and delivered to the client.' : 'Professional services will be provided as per the agreed requirements.');
+  const note = d.notes && !/^Created automatically/i.test(d.notes) ? d.notes : '';
+  const remark = note || S.remark || (inv ? 'Professional services provided as per the agreed requirements. The invoice includes charges for the services completed and delivered to the client.' : 'Professional services will be provided as per the agreed requirements.');
   const br = t => esc(t).replace(/\n/g, '<br>'), qty = x => (+x.quantity === 1 && /^(item|lot|job|ls)$/i.test(x.unit || '')) ? 'Item' : +x.quantity;
-  const n = lines.length, tr = (label, val, cls) => `<tr class="${cls || 'sm'}"><td colspan="6" class="r">${label}</td><td class="r">${val}</td></tr>`;
-  const rows = lines.map((x, i) => `<tr class="${i % 2 ? 'w' : 'g'}">${i === 0 ? `<td rowspan="${n}" class="side">${jnum}</td><td rowspan="${n}" class="side">${br(loc)}</td><td rowspan="${n}" class="side">${esc(jdate ? String(jdate).slice(0, 10) : '')}</td>` : ''}<td>${esc(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`).join('');
+  const gl = {Material: 'Material', Labour: 'Labour', Transport: 'Transport', Other: 'Other charges'};
+  const groups = hasItems ? KINDS.map(k => ({k, rows: lines.filter(x => (KINDS.includes(x.kind) ? x.kind : 'Other') === k)})).filter(g => g.rows.length) : [{k: '', rows: lines}];
+  const span = lines.length + (hasItems ? groups.length : 0);
+  const side = `<td rowspan="${span}" class="side">${jnum}</td><td rowspan="${span}" class="side">${br(loc)}</td><td rowspan="${span}" class="side">${esc(shortDate(jdate))}</td>`;
+  let rows = '', first = true;
+  groups.forEach((g, gi) => {
+    if (hasItems) { rows += `<tr class="gb">${first ? side : ''}<td colspan="3"><span class="nb">${String(gi + 1).padStart(2, '0')}</span>${gl[g.k]}</td><td class="r">${f2(g.rows.reduce((a, x) => a + x.quantity * x.unit_price, 0))}</td></tr>`; first = false; }
+    g.rows.forEach((x, i) => { rows += `<tr class="${i % 2 ? 'w' : 'g'}">${first ? side : ''}<td>${esc(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; first = false; });
+  });
+  const tr = (label, val) => `<tr class="sm"><td colspan="6" class="r">${label}</td><td class="r">${val}</td></tr>`;
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(no)}</title><style>
-@page{size:A4;margin:0}*{box-sizing:border-box}body{margin:0;font:12px/1.45 Calibri,Arial,Helvetica,sans-serif;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.pg{width:210mm;min-height:297mm;padding:8mm 10mm 0;display:flex;flex-direction:column;margin:0 auto}.hd{width:100%;display:block}
-.top{display:flex;justify-content:space-between;align-items:flex-start;margin:14px 0 14px;font-style:italic;font-weight:700}.tt{font-size:26px;color:#1f4e9b}
-.lb div,.vl div{line-height:1.7}.vl{text-align:left;min-width:150px}.lb{margin-right:30px}
-.bar{background:#0b3a6b;color:#fff;font-style:italic;font-weight:700;padding:3px 6px;margin-top:6px}.cd{font-style:italic;padding:4px 0 10px;line-height:1.7}
-table{width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:11px}th{background:#0b3a6b;color:#fff;padding:4px 6px;font-weight:700;text-align:center}
-td{padding:3px 6px;border:1px solid #333;vertical-align:middle}tr.g td{background:#efefef}tr.w td{background:#fff}.c{text-align:center}.r{text-align:right}td.side{background:#fff!important;vertical-align:top;text-align:center}
-tr.sm td{border:0;font-style:italic;font-weight:700}tr.tot td{background:#0b3a6b;color:#fff;font-weight:700;font-style:italic;border-color:#0b3a6b}tr.tot td.r:last-child{font-style:normal}
-.rm{margin-top:30px;font-style:italic}.rm b{margin-right:12px}.bk{margin-top:12px;font-style:italic}
-.sg{display:flex;justify-content:space-between;margin-top:48px;font-style:italic}.sg b{display:block;margin-bottom:22px}.sig{font-family:'Segoe Script','Brush Script MT','Lucida Handwriting',cursive;font-size:16px;font-style:italic}
-.s2{text-align:center;font-style:normal}.ft{margin:auto -10mm 0;background:#0b3a6b;color:#fff;font-style:italic;font-weight:700;padding:11px 12mm;display:flex;justify-content:space-between;gap:16px;margin-top:auto}
-.bt{margin-top:28px}</style></head><body><div class="pg"><img class="hd" src="${S.hdr || DEFAULT_HDR}" alt="">
-<div class="top"><div class="tt">${inv ? 'Invoice' : 'Quotation'}</div><div class="lb"><div>${inv ? 'Invoice' : 'Quotation'} Number :</div><div>Date :</div><div>${inv ? 'Due Date' : 'Valid Date'} :</div></div><div class="vl"><div>${esc(no)}</div><div>${longDate(date)}</div><div>${longDate(second)}</div></div></div>
-<div class="bar">Customer Detail</div><div class="cd"><div>Company/Customer Name : ${esc(c.name || '')}</div><div>Contact Person : ${esc(c.contact_person || '')}</div><div>Address : ${esc((c.address || '').replace(/\n/g, ', '))}</div><div>E mail : ${esc(c.email || '')}${c.phone ? '&nbsp;&nbsp;&nbsp;&nbsp;Phone : ' + esc(c.phone) : ''}</div></div>
-<table><thead><tr><th style="width:13%">Job Number</th><th style="width:15%">Location</th><th style="width:11%">Date</th><th>W/Performed</th><th style="width:7%">Qty</th><th style="width:13%">Charge (LKR)</th><th style="width:13%">Total (LKR)</th></tr></thead><tbody>${rows}
+@page{size:A4;margin:0}*{box-sizing:border-box}body{margin:0;font:12px/1.45 Calibri,Arial,Helvetica,sans-serif;color:#1a1a1a;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.pg{width:210mm;min-height:296mm;padding:6mm 10mm 0;display:flex;flex-direction:column;margin:0 auto}.hd{width:100%;display:block}
+.top{display:flex;justify-content:space-between;align-items:center;margin:10px 0 9px}.tt{font-size:32px;font-weight:800;font-style:italic;color:#0b3d75;line-height:1}.acc{width:70px;height:4px;background:#0ea5e9;margin-top:8px;border-radius:2px}
+.meta{min-width:285px;background:#eef3f9;border-left:5px solid #073763;padding:8px 14px}.meta div{display:flex;justify-content:space-between;gap:20px;line-height:1.85;font-style:italic}.meta b{color:#073763}
+.bar{background:#073763;color:#fff;font-style:italic;font-weight:700;padding:4px 8px}.cd{display:grid;grid-template-columns:1fr 1fr;gap:1px 26px;padding:6px 2px 9px;font-style:italic;line-height:1.55}.cd b{font-style:normal;color:#073763}
+table.it{width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:11px}table.it th{background:#073763;color:#fff;padding:5px 6px;font-weight:700;text-align:center;border:1px solid #073763}
+table.it td{padding:3px 7px;border:1px solid #8a97a6;vertical-align:middle}tr.g td{background:#f0f0f0}tr.w td{background:#fff}.c{text-align:center}.r{text-align:right}td.side{background:#fff!important;vertical-align:top;text-align:center;font-weight:700;color:#073763}
+tr.gb td{background:#dbe6f3;color:#073763;font-weight:700;font-style:italic;border-color:#8a97a6}.nb{display:inline-block;background:#073763;color:#fff;border-radius:3px;padding:0 7px;margin-right:9px;font-style:normal;font-size:10px;line-height:16px}
+tr.sm td{border:0;font-style:italic;font-weight:700;padding-top:3px}tr.tot td{background:#073763;color:#fff;font-weight:700;font-style:italic;border-color:#073763;font-size:13px;padding:6px 8px}tr.tot td.r{font-style:normal}
+.rm{margin-top:16px;border-left:4px solid #0ea5e9;background:#f6f9fc;padding:8px 12px;font-style:italic}.rm b{margin-right:10px;color:#073763}.bk{margin-top:8px;font-style:italic;padding-left:16px}.bk b{color:#073763}
+.sg{display:flex;justify-content:space-between;margin-top:24px;font-style:italic}.sg b{display:block;margin-bottom:12px;color:#073763}.sig{font-family:'Segoe Script','Brush Script MT','Lucida Handwriting',cursive;font-size:17px;font-style:italic;color:#0b3d75}
+.s2{text-align:center;font-style:normal;color:#555}.ft{margin:auto -10mm 0;background:#073763;color:#fff;font-style:italic;font-weight:700;padding:10px 12mm;margin-top:18px;display:flex;justify-content:space-between;gap:16px}</style></head>
+<body><div class="pg"><img class="hd" src="${S.hdr || DEFAULT_HDR}" alt="">
+<div class="top"><div><div class="tt">${inv ? 'Invoice' : 'Quotation'}</div><div class="acc"></div></div><div class="meta"><div><span>${inv ? 'Invoice' : 'Quotation'} Number :</span><b>${esc(no)}</b></div><div><span>Date :</span><b>${longDate(date)}</b></div><div><span>${inv ? 'Due Date' : 'Valid Date'} :</span><b>${longDate(second)}</b></div></div></div>
+<div class="bar">Customer Detail</div><div class="cd"><div><b>Company/Customer Name :</b> ${esc(c.name || '')}</div><div><b>Address :</b> ${esc((c.address || '').replace(/\n/g, ', '))}</div><div><b>Contact Person :</b> ${esc(c.contact_person || '')}${c.phone ? ' &nbsp;(' + esc(c.phone) + ')' : ''}</div><div><b>E mail :</b> ${esc(c.email || '')}</div></div>
+<table class="it"><thead><tr><th style="width:13%">Job Number</th><th style="width:15%">Location</th><th style="width:11%">Date</th><th>W/Performed</th><th style="width:7%">Qty</th><th style="width:13%">Charge (LKR)</th><th style="width:13%">Total (LKR)</th></tr></thead><tbody>${rows}
 ${disc || Math.abs(tax) > 0.005 ? tr('Subtotal', f2(sub)) : ''}${disc ? tr('Discount', '- ' + f2(disc)) : ''}${Math.abs(tax) > 0.005 ? tr('Tax (' + (+d.tax_rate || 0) + '%)', f2(tax)) : ''}
 <tr class="tot"><td colspan="3" style="border-right:0"></td><td colspan="3" style="border-left:0">Total</td><td class="r">${f2(total)}</td></tr>
-${inv ? tr('Received', f2(paid)) + tr('Balance due', f2(total - paid)) : ''}</tbody></table>
+${inv && paid > 0 ? tr('Received', f2(paid)) + tr('Balance due', f2(total - paid)) : ''}</tbody></table>
 <div class="rm"><b>Remark :</b>${br(remark)}</div>${inv && S.bank ? `<div class="bk"><b>Bank details :</b><br>${br(S.bank)}</div>` : ''}
 <div class="sg"><div><b>Prepared By :</b><div class="sig">${esc(pn)}</div><div class="s2">${esc(pt)}</div></div><div><b>Authorized By :</b><div class="sig">${esc(an)}</div><div class="s2">${esc(at)}</div></div></div>
 <div class="ft"><span>Tel : ${esc(tel)}</span><span>E mail : ${esc(mail)}</span></div></div></body></html>`;
@@ -958,7 +972,7 @@ async function form(row, pre) {
     if (ed) {
       const pid = row ? row.id : saved.id;
       await sb.from('line_items').delete().eq('parent_type', ptype).eq('parent_id', pid);
-      const rs = ed.read().map(r => ({...r, parent_type: ptype, parent_id: pid}));
+      const rs = ed.read().sort((a, b) => krank(a.kind) - krank(b.kind) || a.sort - b.sort).map((r, i) => ({...r, sort: i, parent_type: ptype, parent_id: pid}));
       if (rs.length) { const {error: e2} = await sb.from('line_items').insert(rs); if (e2) return toast('Items not saved: ' + e2.message + ' (run SQL 010)'); }
     }
     const qmsg = S.view === 'jobs' && o.job_type === 'Quotation' && !(row && row.quotation_id);
