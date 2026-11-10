@@ -439,7 +439,33 @@ async function aiGenerate() {
   try {
     const files=await Promise.all(selected.map(async f=>({name:f.name,type:f.type,data:await fileAsBase64(f)})));
     const catalog=S.items.map(i=>({name:i.name,kind:i.kind,unit:i.unit,unit_cost:i.unit_cost,unit_price:i.unit_price}));
-    const {data,error}=await sb.functions.invoke('ai-quotation-draft',{body:{description,files,catalog}});
+    
+const { data: sessionData, error: sessionError } =
+  await sb.auth.getSession();
+
+const accessToken = sessionData?.session?.access_token;
+
+if (sessionError || !accessToken) {
+  throw new Error('Please login again. No active session found.');
+}
+
+const { data, error } = await sb.functions.invoke(
+  'ai-quotation-draft',
+  {
+    body: { description, files, catalog },
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  }
+);
+
+if (error) {
+  const details = await error.context?.json?.().catch(() => null);
+  throw new Error(details?.error || error.message || 'AI function failed');
+}
+
+if (data?.error) throw new Error(data.error);
+
     if(error) throw new Error(error.message||'AI function failed');
     if(data?.error) throw new Error(data.error);
     const draft=data.draft; AI_DRAFT={draft,customer,lines:draft.lines.map((l,i)=>{
