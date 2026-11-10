@@ -405,14 +405,87 @@ const reload = async () => { await loadCust(); await loadJobs(); await loadProje
 
 /* ---------- navigation ---------- */
 function nav() {
-  const items = [['dashboard','Dashboard','grid'],['customers','Customers','users'],['quotations','Quotations','quote'],['projects','Projects','folder'],['jobs','Jobs','job'],['maintenance','Maintenance','wrench'],['supplies','Item supply','box'],['items','Items catalog','box'],['invoices','Invoices','file'],['settings','Settings','cog']];
+  const items = [['dashboard','Dashboard','grid'],['customers','Customers','users'],['quotations','Quotations','quote'],['aiquote','AI Quotation','sparkle'],['projects','Projects','folder'],['jobs','Jobs','job'],['maintenance','Maintenance','wrench'],['supplies','Item supply','box'],['items','Items catalog','box'],['invoices','Invoices','file'],['settings','Settings','cog']];
   $('#nav').innerHTML = '<div class="brand"><span class="logo">' + esc(S.co.slice(0, 2).toUpperCase()) + '</span>' + esc(S.co) + '</div>'
     + items.map(([k, l, i]) => `<button data-k="${k}" class="${S.view === k ? 'on' : ''}">${ic(i)}<span>${l}</span></button>`).join('')
     + `<span class="sp"></span><button id="so">${ic('out')}<span>Sign out</span></button>`;
   document.querySelectorAll('#nav [data-k]').forEach(b => b.onclick = () => go(b.dataset.k));
   $('#so').onclick = () => sb.auth.signOut();
 }
-function go(v) { S.view = v; S.q = ''; S.f = {}; S.page = 1; S.sort = {k: 'created_at', d: -1}; nav(); v === 'dashboard' ? dash() : v === 'settings' ? settings() : list(); }
+function go(v) { S.view = v; S.q = ''; S.f = {}; S.page = 1; S.sort = {k: 'created_at', d: -1}; nav(); v === 'dashboard' ? dash() : v === 'settings' ? settings() : v === 'aiquote' ? aiQuotationPage() : list(); }
+
+
+/* ---------- AI quotation generator ---------- */
+let AI_DRAFT = null;
+function aiQuotationPage() {
+  $('#main').innerHTML = `<div class="ph"><div class="hh"><span class="hi">${ic('sparkle',22)}</span><div><h1>AI Quotation Generator</h1><p class="mu">Describe a job or upload a customer BOQ, photo or PDF. AI prepares an editable draft using your item catalog.</p></div></div></div>
+  <div class="card" style="padding:18px;display:grid;gap:14px">
+    <div class="fld"><label>Customer *</label><select id="ai-customer"><option value="">Select customer</option>${S.cust.map(c=>`<option value="${c.id}">${esc(c.name)}${c.phone?' · '+esc(c.phone):''}</option>`).join('')}</select></div>
+    <div class="fld"><label>Job description / instructions</label><textarea id="ai-description" rows="5" placeholder="Example: Install 6 IP CCTV cameras, 157 m CAT6 cable in PVC casing, configure NVR and test the system..."></textarea></div>
+    <div class="fld"><label>Upload BOQ / photo / PDF (up to 4 files; JPG, PNG, WEBP, PDF)</label><input id="ai-files" type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf"><small class="mu">Maximum 8 MB per file. Do not upload confidential documents unnecessarily.</small></div>
+    <div class="row" style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" id="ai-generate">${ic('sparkle',16)} Generate draft</button><span class="mu" id="ai-status" style="align-self:center">Prices are taken only from your existing Items catalog. Unmatched items need manual pricing.</span></div>
+  </div><div id="ai-result" style="margin-top:16px"></div>`;
+  $('#ai-generate').onclick = aiGenerate;
+}
+function fileAsBase64(file) {
+  return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]||'');reader.onerror=reject;reader.readAsDataURL(file);});
+}
+async function aiGenerate() {
+  const customer=$('#ai-customer').value, description=$('#ai-description').value.trim(), selected=[...$('#ai-files').files];
+  if(!customer) return toast('Select a customer first.');
+  if(!description&&!selected.length) return toast('Enter job details or attach a BOQ/photo/PDF.');
+  if(selected.length>4 || selected.some(f=>f.size>8*1024*1024)) return toast('Maximum 4 files, 8 MB each.');
+  const btn=$('#ai-generate'), status=$('#ai-status'); btn.disabled=true; btn.textContent='Reading BOQ and preparing…'; status.textContent='AI is extracting line items and matching your catalog. Please wait.';
+  try {
+    const files=await Promise.all(selected.map(async f=>({name:f.name,type:f.type,data:await fileAsBase64(f)})));
+    const catalog=S.items.map(i=>({name:i.name,kind:i.kind,unit:i.unit,unit_cost:i.unit_cost,unit_price:i.unit_price}));
+    const {data,error}=await sb.functions.invoke('ai-quotation-draft',{body:{description,files,catalog}});
+    if(error) throw new Error(error.message||'AI function failed');
+    if(data?.error) throw new Error(data.error);
+    const draft=data.draft; AI_DRAFT={draft,customer,lines:draft.lines.map((l,i)=>{
+      const match=l.catalog_match?S.items.find(x=>x.name.toLowerCase()===l.catalog_match.toLowerCase()):null;
+      const spec=l.specification?` — ${l.specification}`:'';
+      return {kind:l.kind,description:l.description+spec,quantity:l.quantity||1,unit:l.unit||match?.unit||'pcs',unit_cost:match?+match.unit_cost||0:0,unit_price:match?+match.unit_price||0:0,sort:i,review:!match||l.confidence<0.7||!!l.review_note,review_note:l.review_note||(!match?'No exact catalog price match. Enter cost and selling price manually.':l.confidence<0.7?'Please verify extracted details.':'')};
+    })};
+    renderAiDraft(); status.textContent='Draft ready. Review every line and confirm prices before saving.';
+  } catch(e) { status.textContent=''; toast('AI error: '+e.message); }
+  finally { btn.disabled=false; btn.innerHTML=ic('sparkle',16)+' Generate draft'; }
+}
+function renderAiDraft() {
+  if(!AI_DRAFT) return;
+  const d=AI_DRAFT.draft;
+  $('#ai-result').innerHTML=`<div class="card" style="padding:18px;display:grid;gap:12px"><div><h2>Review AI quotation draft</h2><p class="mu">This is not saved yet. Verify quantities, specifications, unit costs and selling prices.</p></div>
+  <div class="fld"><label>Quotation title</label><input id="ai-title" value="${esc(d.title||'Engineering works')}"></div>
+  <div class="fld"><label>Site / location</label><input id="ai-site" value="${esc(d.site||'')}"></div>
+  <div class="fld"><label>Description</label><textarea id="ai-desc-edit" rows="2">${esc(d.description||$('#ai-description')?.value||'')}</textarea></div>
+  <div class="ct tw li"><table><thead><tr><th>Type</th><th>Description</th><th>Qty</th><th>Unit</th><th>Cost/unit</th><th>Sell/unit</th><th></th></tr></thead><tbody id="ai-lines"></tbody></table></div>
+  <div class="row" style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn g s" id="ai-add-line">+ Add line</button><span class="mu" id="ai-totals"></span></div>
+  <div class="fld"><label>Additional notes / review flags</label><textarea id="ai-notes" rows="3" placeholder="Add assumptions, exclusions or missing-price notes">${esc(AI_DRAFT.lines.filter(x=>x.review).map(x=>x.description+': '+x.review_note).join('\n'))}</textarea></div>
+  <div class="foot"><button class="btn g" id="ai-cancel">Discard draft</button><button class="btn" id="ai-save">Confirm & save quotation</button></div></div>`;
+  const tb=$('#ai-lines');
+  const rowHtml=(l,i)=>`<tr data-i="${i}"><td><select class="aik">${KINDS.map(k=>`<option${k===l.kind?' selected':''}>${k}</option>`).join('')}</select></td><td><input class="aid" value="${esc(l.description)}" style="min-width:220px"><small style="display:block;color:${l.review?'#b45309':'#15803d'}">${l.review?'Review: '+esc(l.review_note||'Check details / price'):'Catalog matched / verify'}</small></td><td><input class="aiq" type="number" min="0" step="0.01" value="${l.quantity}" style="width:75px"></td><td><input class="aiu" value="${esc(l.unit)}" style="width:65px"></td><td><input class="aic" type="number" min="0" step="0.01" value="${l.unit_cost}" style="width:100px"></td><td><input class="aip" type="number" min="0" step="0.01" value="${l.unit_price}" style="width:100px"></td><td><button type="button" class="btn g s air">×</button></td></tr>`;
+  const draw=()=>{tb.innerHTML=AI_DRAFT.lines.map(rowHtml).join('');calc();};
+  const read=()=>[...tb.rows].map((tr,i)=>({kind:tr.querySelector('.aik').value,description:tr.querySelector('.aid').value.trim(),quantity:+tr.querySelector('.aiq').value||0,unit:tr.querySelector('.aiu').value.trim()||'pcs',unit_cost:+tr.querySelector('.aic').value||0,unit_price:+tr.querySelector('.aip').value||0,sort:i})).filter(x=>x.description);
+  const calc=()=>{const a=read();const cost=a.reduce((s,x)=>s+x.quantity*x.unit_cost,0),sale=a.reduce((s,x)=>s+x.quantity*x.unit_price,0);$('#ai-totals').textContent=`Material/labour cost ${money(cost)} · Quotation total ${money(sale)} · Gross profit ${money(sale-cost)}`;};
+  draw(); tb.oninput=calc; tb.onclick=e=>{if(e.target.classList.contains('air')){e.target.closest('tr').remove();calc();}};
+  $('#ai-add-line').onclick=()=>{AI_DRAFT.lines.push({kind:'Material',description:'',quantity:1,unit:'pcs',unit_cost:0,unit_price:0});draw();};
+  $('#ai-cancel').onclick=()=>{AI_DRAFT=null;$('#ai-result').innerHTML='';};
+  $('#ai-save').onclick=async()=>{
+    const customer=AI_DRAFT.customer, lines=read(); if(!lines.length)return toast('Add at least one quotation line.');
+    if(lines.some(x=>x.unit_cost<0||x.unit_price<0||x.quantity<=0))return toast('Check quantities and prices.');
+    if(lines.some(x=>x.unit_cost===0||x.unit_price===0)&&!confirm('Some lines have zero cost or selling price. Save anyway for manual review?'))return;
+    const sums={Material:0,Labour:0,Transport:0,Other:0}; lines.forEach(x=>sums[x.kind]+=x.quantity*x.unit_cost);
+    const amount=lines.reduce((s,x)=>s+x.quantity*x.unit_price,0);
+    const payload={customer_id:customer,title:$('#ai-title').value.trim()||'Engineering quotation',site:$('#ai-site').value.trim(),description:$('#ai-desc-edit').value,quote_date:today(),valid_until:addDays(S.qvalid),status:'Draft',labour_cost:sums.Labour,material_cost:sums.Material,transport_cost:sums.Transport,other_cost:sums.Other,amount,notes:$('#ai-notes').value};
+    const saveBtn=$('#ai-save');saveBtn.disabled=true;saveBtn.textContent='Saving…';
+    const {data,error}=await sb.from('quotations').insert(payload).select('id').single();
+    if(error){saveBtn.disabled=false;saveBtn.textContent='Confirm & save quotation';return toast('Quotation save failed: '+error.message);}
+    const {error:lineError}=await sb.rpc('save_line_items',{p_type:'quotation',p_id:data.id,p_items:lines.map((x,i)=>({...x,sort:i}))});
+    if(lineError){toast('Quotation created, but line items failed to save: '+lineError.message+'. Do not create it again; open the quotation and retry items.');}
+    else toast('AI quotation saved as Draft. Review and send it from Quotations.');
+    AI_DRAFT=null;await reload();go('quotations');
+  };
+}
 
 /* ---------- dashboard ---------- */
 function range() {
@@ -730,9 +803,10 @@ function itemsEditor(rows, onChange) {
     <div class="liact"><button type="button" class="btn g s" data-add>${ic('plus', 14)} Add line</button><span class="mu" style="font-size:12.5px">Choose an item from your catalog to fill the price automatically. The totals above are calculated from these lines.</span></div>
     <datalist id="itemlist">${S.items.map(i => `<option value="${esc(i.name)}"></option>`).join('')}</datalist>`;
   const tb = w.querySelector('tbody');
-  const rowH = r => `<tr><td><select class="lk">${KINDS.map(k => `<option${(r.kind || 'Material') === k ? ' selected' : ''}>${k}</option>`).join('')}</select></td><td><input class="ld" list="itemlist" value="${esc(r.description || '')}" placeholder="Item or service"></td><td><input class="lq" type="number" step="0.01" min="0" value="${r.quantity ?? 1}"></td><td><input class="lu" value="${esc(r.unit || 'pcs')}"></td><td><input class="lc" type="number" step="0.01" min="0" value="${r.unit_cost ?? 0}"></td><td><input class="lp" type="number" step="0.01" min="0" value="${r.unit_price ?? 0}"></td><td class="lt a"></td><td><button type="button" class="btn g s lx" title="Remove line" aria-label="Remove line">${ic('x', 14)}</button></td></tr>`;
+  const rowH = r => `<tr data-line-id="${esc(r.id || '')}"><td><select class="lk">${KINDS.map(k => `<option${(r.kind || 'Material') === k ? ' selected' : ''}>${k}</option>`).join('')}</select></td><td><input class="ld" list="itemlist" value="${esc(r.description || '')}" placeholder="Item or service"></td><td><input class="lq" type="number" step="0.01" min="0" value="${r.quantity ?? 1}"></td><td><input class="lu" value="${esc(r.unit || 'pcs')}"></td><td><input class="lc" type="number" step="0.01" min="0" value="${r.unit_cost ?? 0}"></td><td><input class="lp" type="number" step="0.01" min="0" value="${r.unit_price ?? 0}"></td><td class="lt a"></td><td><button type="button" class="btn g s lx" title="Remove line" aria-label="Remove line">${ic('x', 14)}</button></td></tr>`;
   const q = (tr, c) => tr.querySelector(c);
-  const read = () => [...tb.rows].map((tr, i) => ({kind: q(tr, '.lk').value, description: q(tr, '.ld').value.trim(), quantity: +q(tr, '.lq').value || 0, unit: q(tr, '.lu').value.trim() || 'pcs', unit_cost: +q(tr, '.lc').value || 0, unit_price: +q(tr, '.lp').value || 0, sort: i})).filter(r => r.description);
+  // Preserve database IDs so quotation materials stay linked to their supply records.
+  const read = () => [...tb.rows].map((tr, i) => ({id: tr.dataset.lineId || null, kind: q(tr, '.lk').value, description: q(tr, '.ld').value.trim(), quantity: +q(tr, '.lq').value || 0, unit: q(tr, '.lu').value.trim() || 'pcs', unit_cost: +q(tr, '.lc').value || 0, unit_price: +q(tr, '.lp').value || 0, sort: i})).filter(r => r.description);
   const totals = () => { const t = {n: 0, price: 0, Labour: 0, Material: 0, Transport: 0, Other: 0}; read().forEach(r => { t.n++; t.price += r.quantity * r.unit_price; t[r.kind] += r.quantity * r.unit_cost; }); return t; };
   const upd = () => { [...tb.rows].forEach(tr => { q(tr, '.lt').textContent = money((+q(tr, '.lq').value || 0) * (+q(tr, '.lp').value || 0)); }); onChange(totals()); };
   const add = r => tb.insertAdjacentHTML('beforeend', rowH(r || {}));
@@ -971,9 +1045,10 @@ async function form(row, pre) {
     if (error) return toast('Save failed: ' + error.message);
     if (ed) {
       const pid = row ? row.id : saved.id;
-      await sb.from('line_items').delete().eq('parent_type', ptype).eq('parent_id', pid);
-      const rs = ed.read().sort((a, b) => krank(a.kind) - krank(b.kind) || a.sort - b.sort).map((r, i) => ({...r, sort: i, parent_type: ptype, parent_id: pid}));
-      if (rs.length) { const {error: e2} = await sb.from('line_items').insert(rs); if (e2) return toast('Items not saved: ' + e2.message + ' (run SQL 010)'); }
+      const rs = ed.read().sort((a, b) => krank(a.kind) - krank(b.kind) || a.sort - b.sort).map((r, i) => ({...r, sort: i}));
+      // Use the workflow RPC to preserve line IDs and synchronize quotation materials to Item Supply.
+      const {error: e2} = await sb.rpc('save_line_items', {p_type: ptype, p_id: pid, p_items: rs});
+      if (e2) return toast('Items not saved: ' + e2.message + ' (run SQL 015_sync_engine.sql in Supabase)');
     }
     const qmsg = S.view === 'jobs' && o.job_type === 'Quotation' && !(row && row.quotation_id);
     $('#dlg').close(); toast(qmsg ? 'Job saved. A draft quotation was added to the Quotations tab.' : row ? 'Saved' : 'Created');
