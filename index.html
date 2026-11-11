@@ -203,7 +203,7 @@ const ICON = {grid:'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z', users:'
   moon:'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z', sun:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
   dl:'M12 3v12M7 10l5 5 5-5M4 21h16', plus:'M12 5v14M5 12h14', search:'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5-5', cash:'M3 6h18v12H3zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6', clock:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2', quote:'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01', up:'M12 16V4M7 9l5-5 5 5M4 21h16', edit:'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z', trash:'M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6', check:'M20 6L9 17l-5-5', x:'M18 6L6 18M6 6l12 12', filter:'M3 4h18l-7 8v6l-4 2v-8z', cols:'M3 4h18v16H3zM9 4v16M15 4v16', trend:'M3 17l6-6 4 4 8-8M14 7h7v7', folder:'M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', wrench:'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z', box:'M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8', sparkle:'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z'};
 const ic = (n, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${ICON[n]}"/></svg>`;
-const S = {view: 'dashboard', q: '', f: {}, sort: {k: 'created_at', d: -1}, page: 1, ps: 15, hid: {}, dcust: '', dfrom: '', dto: '', cur: 'LKR', co: 'ConnectPro', terms: 30, dur: 14, items: [], addr: '', phone: '', email: '', bank: '', foot: '', logo: '', hdr: '', qpre: 'C', ipre: 'I', qvalid: 30, prepName: '', prepTitle: '', authName: '', authTitle: '', remark: '', maint: [], invs: [], cust: [], jobs: [], projects: [], target: 0, rows: [], user: '', period: 'all',
+const S = {view: 'dashboard', q: '', f: {}, sort: {k: 'created_at', d: -1}, page: 1, ps: 15, hid: {}, dcust: '', dfrom: '', dto: '', cur: 'LKR', co: 'ConnectPro', terms: 30, dur: 14, items: [], addr: '', phone: '', email: '', bank: '', foot: '', logo: '', hdr: '', qpre: 'C', ipre: 'I', qvalid: 30, prepName: '', prepTitle: '', authName: '', authTitle: '', remark: '', maint: [], msel: {}, invs: [], cust: [], jobs: [], projects: [], target: 0, rows: [], user: '', period: 'all',
   statuses: ['Received','Inspection','Quotation','Approved','Assigned','In Progress','Completed','Invoiced','Paid']};
 const PS = 15;
 
@@ -654,8 +654,9 @@ function draw() {
   const vis = rows.slice((S.page - 1) * S.ps, S.page * S.ps);
   if (!vis.length) { $('#tb').innerHTML = `<div class="empty">${ic('filter', 36)}<br>${S.rows.length ? 'No records match these filters. Try clearing them.' : 'No ' + m.label.toLowerCase() + ' yet. Use “Add ' + m.one + '” to create the first one.'}</div>`; $('#pg').innerHTML = ''; return; }
   $('#tb').style.padding = '0';
-  $('#tb').innerHTML = '<table><thead><tr>' + cols.map(c => `<th data-s="${c[0]}"${c[3] ? ' class="a"' : ''}>${c[1]}${k === c[0] ? (d > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '<th></th></tr></thead><tbody>'
-    + vis.map(r => '<tr>' + cols.map(c => `<td${c[3] ? ' class="a"' : ''}>${c[2] ? c[2](r) : esc(r[c[0]])}</td>`).join('')
+  const mm = S.view === 'maintenance';
+  $('#tb').innerHTML = (mm ? '<div id="msbar" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--bd,#e5e7eb)"></div>' : '') + '<table><thead><tr>' + (mm ? '<th style="width:34px"><input type="checkbox" id="msa" title="Select all on this page" aria-label="Select all"></th>' : '') + cols.map(c => `<th data-s="${c[0]}"${c[3] ? ' class="a"' : ''}>${c[1]}${k === c[0] ? (d > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '<th></th></tr></thead><tbody>'
+    + vis.map(r => '<tr>' + (mm ? `<td><input type="checkbox" data-ms="${r.id}" aria-label="Select task"${S.msel[r.id] ? ' checked' : ''}></td>` : '') + cols.map(c => `<td${c[3] ? ' class="a"' : ''}>${c[2] ? c[2](r) : esc(r[c[0]])}</td>`).join('')
       + `<td class="a">${acts(r)}<button class="btn g s" title="Edit" aria-label="Edit" data-e="${r.id}">${ic('edit', 15)}</button> <button class="btn g s" title="Delete" aria-label="Delete" data-d="${r.id}">${ic('trash', 15)}</button></td></tr>`).join('') + '</tbody></table>';
   $('#pg').innerHTML = `<select id="ps" aria-label="Rows per page">${[10,15,25,50,100].map(n => `<option value="${n}"${S.ps === n ? ' selected' : ''}>${n} per page</option>`).join('')}</select>`
     + (pages > 1 ? `<button class="btn g s" id="pv"${S.page < 2 ? ' disabled' : ''}>Previous</button><span class="mu">Page ${S.page} of ${pages}</span><button class="btn g s" id="nx"${S.page >= pages ? ' disabled' : ''}>Next</button>` : '');
@@ -674,6 +675,19 @@ function draw() {
   document.querySelectorAll('[data-pay]').forEach(b => b.onclick = () => payDialog(b.dataset.pay));
   document.querySelectorAll('[data-md]').forEach(b => b.onclick = () => maintDone(b.dataset.md));
   document.querySelectorAll('[data-mj]').forEach(b => b.onclick = () => maintJob(b.dataset.mj));
+  if (mm) {
+    const bar = () => {
+      const ids = Object.keys(S.msel).filter(k => S.msel[k] && S.maint.some(x => x.id === k)), tot = ids.reduce((a, k) => a + (+S.maint.find(x => x.id === k).value || 0), 0);
+      $('#msbar').innerHTML = ids.length ? `<b>${ids.length} selected</b><span class="mu">Total ${money(tot)}</span><button class="btn s" id="msinv">${ic('file', 14)} Create one invoice</button><button class="btn g s" id="mscl">Clear selection</button>`
+        : '<span class="mu">Tick the maintenance tasks you want, then create a single invoice for all of them.</span>';
+      const a = $('#msa'); if (a) a.checked = vis.length > 0 && vis.every(r => S.msel[r.id]);
+      if ($('#mscl')) $('#mscl').onclick = () => { S.msel = {}; document.querySelectorAll('[data-ms]').forEach(c => c.checked = false); bar(); };
+      if ($('#msinv')) $('#msinv').onclick = () => maintInvoice(ids);
+    };
+    document.querySelectorAll('[data-ms]').forEach(c => c.onchange = () => { c.checked ? S.msel[c.dataset.ms] = 1 : delete S.msel[c.dataset.ms]; bar(); });
+    $('#msa').onchange = e => { vis.forEach(r => e.target.checked ? S.msel[r.id] = 1 : delete S.msel[r.id]); document.querySelectorAll('[data-ms]').forEach(c => c.checked = e.target.checked); bar(); };
+    bar();
+  }
   document.querySelectorAll('[data-v]').forEach(b => b.onclick = () => S.view === 'jobs' ? jobCard(b.dataset.v) : custCard(b.dataset.v));
 }
 
@@ -967,6 +981,17 @@ async function maintJob(id) {
   if (error) return toast('Failed: ' + error.message);
   await reload(); toast('Job ' + pad('J-', data.job_no) + ' created. The task is now In progress.'); list();
 }
+function maintInvoice(ids) {
+  const ts = ids.map(id => S.maint.find(x => x.id === id)).filter(Boolean);
+  if (!ts.length) return toast('Select at least one maintenance task');
+  const custs = [...new Set(ts.map(t => t.customer_id || ''))];
+  if (custs.length > 1) return toast('Selected tasks belong to different customers. Select tasks of one customer for a single invoice.');
+  if (!custs[0]) return toast('The selected tasks have no customer. Edit them and choose a customer first.');
+  const items = ts.map(t => ({kind: 'Other', description: t.title + ([t.site, t.asset].filter(Boolean).length ? ' - ' + [t.site, t.asset].filter(Boolean).join(' / ') : ''),
+    quantity: 1, unit: 'visit', unit_cost: +t.est_cost || 0, unit_price: +t.value || 0}));
+  const notes = 'Maintenance: ' + ts.map(t => pad('M-', t.ref_no)).join(', ');
+  S.msel = {}; go('invoices'); form(null, {customer_id: custs[0], items, notes});
+}
 async function completeJob(id) {
   const {error} = await sb.from('jobs').update({status: 'Completed', completion_date: today()}).eq('id', id);
   if (error) return toast('Failed: ' + error.message);
@@ -1052,6 +1077,8 @@ async function form(row, pre) {
     ['discount', 'tax_rate'].forEach(n => { const e = nm(n); if (e) e.addEventListener('input', () => ed.update()); });
     ed.update();
   }
+  const preCust = (pre && pre.customer_id) || (row && !row.job_id && row.customer_id) || null;
+  if (S.view === 'invoices' && preCust) { const jsel = nm('job_id'); jsel.required = false; jsel.options[0].textContent = 'No job (maintenance invoice for ' + (cname(preCust) || 'customer') + ')'; }
   if (S.view === 'invoices') {
     const js = nm('job_id');
     js.onchange = async () => { if (!row && ed.isEmpty() && js.value) ed.setRows(await jobInvoiceItems(js.value)); };
@@ -1063,7 +1090,7 @@ async function form(row, pre) {
     const fd = new FormData($('#df')), o = {};
     m.f.forEach(([k,, t]) => { const v = fd.get(k); o[k] = v === '' || v === null ? (t === 'number' && S.view !== 'customers' ? 0 : null) : t === 'number' ? +v : v; });
     const jb = S.view === 'invoices' ? S.jobs.find(x => x.id === o.job_id) : null;
-    if (S.view === 'invoices') { if (!jb) return toast('Select a job'); o.customer_id = jb.customer_id; }
+    if (S.view === 'invoices') { if (jb) o.customer_id = jb.customer_id; else if (preCust) o.customer_id = preCust; else return toast('Select a job'); }
     if (S.view === 'jobs' && o.job_type !== 'Maintenance') o.maintenance_id = null;
     const save = () => row ? sb.from(S.view).update(o).eq('id', row.id) : sb.from(S.view).insert(o).select('id').single();
     let {data: saved, error} = await save();
