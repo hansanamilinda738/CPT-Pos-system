@@ -389,7 +389,8 @@ async function loadItems() {
 }
 async function loadMaint() {
   const q = c => sb.from('maintenance').select(c).is('deleted_at', null).order('ref_no');
-  let r = await q('id,ref_no,title,customer_id,est_cost,value,frequency,next_due,status');
+  let r = await q('id,ref_no,title,customer_id,site,asset,est_cost,value,frequency,next_due,status');
+  if (r.error) r = await q('id,ref_no,title,customer_id,est_cost,value,frequency,next_due,status');
   if (r.error) r = await q('id,ref_no,title,customer_id,est_cost,frequency,next_due,status');
   S.maint = r.data || [];
 }
