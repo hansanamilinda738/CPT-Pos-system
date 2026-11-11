@@ -924,7 +924,7 @@ async function printDoc(type, id) {
   const paid = (pay.data || []).reduce((a, p) => a + (+p.amount || 0), 0), no = inv ? inn(d) : qn(d);
   const date = inv ? d.issue_date : d.quote_date, second = inv ? d.due_date : (d.valid_until || (date ? new Date(new Date(date + 'T12:00:00').getTime() + 30 * 864e5).toISOString().slice(0, 10) : ''));
   const mtasks = inv && !j ? S.maint.filter(t => new RegExp(pad('M-', t.ref_no) + '(?!\\d)').test(d.notes || '') || t.id === d.maintenance_id).sort((a, b) => String(b.title).length - String(a.title).length) : [], per = mtasks.length > 0;
-  const siteOf = x => { const t = mtasks.find(t => (x.description || '').startsWith(t.title)); return t ? (t.site || '') : ''; };
+  const siteOf = x => { const t = mtasks.find(t => (x.description || '').startsWith(t.title)); return t ? [t.site, t.asset].filter(Boolean).join(' / ') : ''; };
   const loc = (inv ? (j && j.site) || '' : d.site) || '', jdate = inv ? ((j && j.completion_date) || d.issue_date || '') : '', jnum = inv && j ? pad('J-', j.job_no) : '';
   const tel = S.phone || '+9475 4276105 / +9470 6651029 (Whatsapp)', mail = S.email || 'connectprotechnologies11@gmail.com';
   const pn = S.prepName || 'Kanishka Kumarasinghe', pt = S.prepTitle || 'Executive', an = S.authName || 'Hansana Milinda', at = S.authTitle || 'Owner';
