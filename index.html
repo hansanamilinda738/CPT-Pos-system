@@ -489,21 +489,7 @@ function renderAiDraft() {
   <div class="fld"><label>Additional notes / review flags</label><textarea id="ai-notes" rows="3" placeholder="Add assumptions, exclusions or missing-price notes">${esc(AI_DRAFT.lines.filter(x=>x.review).map(x=>x.description+': '+x.review_note).join('\n'))}</textarea></div>
   <div class="foot"><button class="btn g" id="ai-cancel">Discard draft</button><button class="btn" id="ai-save">Confirm & save quotation</button></div></div>`;
   const tb=$('#ai-lines');
-  
-<CodeBlock language="javascript" editable>
-const rowHtml=(l,i)=>`DIL0`;
-</CodeBlock>
-<td style="width:38%;min-width:0">
-<textarea class="aid" rows="4" style="width:100%;min-height:90px;box-sizing:border-box;white-space:pre-wrap;overflow-wrap:anywhere;resize:vertical">${esc(l.description)}</textarea>
-<small style="display:block;white-space:normal;overflow-wrap:anywhere;color:${l.review?'#b45309':'#15803d'}">${l.review?'Review: '+esc(l.review_note||'Check details / price'):'Catalog matched / verify'}</small>
-</td>
-<td style="width:8%"><input class="aiq" type="number" min="0" step="0.01" value="${l.quantity}" style="width:100%;box-sizing:border-box"></td>
-<td style="width:8%"><input class="aiu" value="${esc(l.unit)}" style="width:100%;box-sizing:border-box"></td>
-<td style="width:14%"><input class="aic" type="number" min="0" step="0.01" value="${l.unit_cost}" style="width:100%;box-sizing:border-box"></td>
-<td style="width:14%"><input class="aip" type="number" min="0" step="0.01" value="${l.unit_price}" style="width:100%;box-sizing:border-box"></td>
-<td style="width:6%"><button type="button" class="btn g s air">×</button></td>
-</tr>`;
-''}>${k}</option>`).join('')}</select></td><<td><input class="aid" value="${esc(l.description)}" style="min-width:220px"><small style="display:block;color:${l.review?'#b45309':'#15803d'}">${l.review?'Review: '+esc(l.review_note||'Check details / price'):'Catalog matched / verify'}</small></td><td><input class="aiq" type="number" min="0" step="0.01" value="${l.quantity}" style="width:75px"></td><td><input class="aiu" value="${esc(l.unit)}" style="width:65px"></td><td><input class="aic" type="number" min="0" step="0.01" value="${l.unit_cost}" style="width:100px"></td><td><input class="aip" type="number" min="0" step="0.01" value="${l.unit_price}" style="width:100px"></td><td><button type="button" class="btn g s air">×</button></td></tr>`;
+  const rowHtml=(l,i)=>`<tr data-i="${i}"><td><select class="aik">${KINDS.map(k=>`<option${k===l.kind?' selected':''}>${k}</option>`).join('')}</select></td><td><input class="aid" value="${esc(l.description)}" style="min-width:220px"><small style="display:block;color:${l.review?'#b45309':'#15803d'}">${l.review?'Review: '+esc(l.review_note||'Check details / price'):'Catalog matched / verify'}</small></td><td><input class="aiq" type="number" min="0" step="0.01" value="${l.quantity}" style="width:75px"></td><td><input class="aiu" value="${esc(l.unit)}" style="width:65px"></td><td><input class="aic" type="number" min="0" step="0.01" value="${l.unit_cost}" style="width:100px"></td><td><input class="aip" type="number" min="0" step="0.01" value="${l.unit_price}" style="width:100px"></td><td><button type="button" class="btn g s air">×</button></td></tr>`;
   const draw=()=>{tb.innerHTML=AI_DRAFT.lines.map(rowHtml).join('');calc();};
   const read=()=>[...tb.rows].map((tr,i)=>({kind:tr.querySelector('.aik').value,description:tr.querySelector('.aid').value.trim(),quantity:+tr.querySelector('.aiq').value||0,unit:tr.querySelector('.aiu').value.trim()||'pcs',unit_cost:+tr.querySelector('.aic').value||0,unit_price:+tr.querySelector('.aip').value||0,sort:i})).filter(x=>x.description);
   const calc=()=>{const a=read();const cost=a.reduce((s,x)=>s+x.quantity*x.unit_cost,0),sale=a.reduce((s,x)=>s+x.quantity*x.unit_price,0);$('#ai-totals').textContent=`Material/labour cost ${money(cost)} · Quotation total ${money(sale)} · Gross profit ${money(sale-cost)}`;};
@@ -839,7 +825,7 @@ const KINDS = ['Material','Labour','Transport','Other'];
 const krank = k => { const i = KINDS.indexOf(k); return i < 0 ? 3 : i; };
 function itemsEditor(rows, onChange) {
   const w = document.createElement('div'); w.className = 'full';
-  w.innerHTML = `<h3 style="margin-bottom:8px">Items, labour and costs</h3><div style="width:100%;overflow:visible;"><table style="width:100%;table-layout:fixed;border-collapse:collapse;"><thead><tr><th>Type</th><th>Description</th><th>Qty</th><th>Unit</th><th>Unit cost</th><th>Unit price</th><th class="a">Total</th><th></th></tr></thead><tbody></tbody></table></div>
+  w.innerHTML = `<h3 style="margin-bottom:8px">Items, labour and costs</h3><div class="ct tw li"><table><thead><tr><th>Type</th><th>Description</th><th>Qty</th><th>Unit</th><th>Unit cost</th><th>Unit price</th><th class="a">Total</th><th></th></tr></thead><tbody></tbody></table></div>
     <div class="liact"><button type="button" class="btn g s" data-add>${ic('plus', 14)} Add line</button><span class="mu" style="font-size:12.5px">Choose an item from your catalog to fill the price automatically. The totals above are calculated from these lines.</span></div>
     <datalist id="itemlist">${S.items.map(i => `<option value="${esc(i.name)}"></option>`).join('')}</datalist>`;
   const tb = w.querySelector('tbody');
