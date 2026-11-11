@@ -923,7 +923,8 @@ async function printDoc(type, id) {
   const sub = lines.reduce((a, x) => a + x.quantity * x.unit_price, 0), disc = +d.discount || 0, total = +d.amount || 0, tax = total - (sub - disc);
   const paid = (pay.data || []).reduce((a, p) => a + (+p.amount || 0), 0), no = inv ? inn(d) : qn(d);
   const date = inv ? d.issue_date : d.quote_date, second = inv ? d.due_date : (d.valid_until || (date ? new Date(new Date(date + 'T12:00:00').getTime() + 30 * 864e5).toISOString().slice(0, 10) : ''));
-  const loc = (inv ? (j && j.site) || '' : d.site) || '', jdate = inv ? ((j && j.completion_date) || d.issue_date || '') : '', jnum = inv && j ? pad('J-', j.job_no) : '';
+  const mlocs = inv && !(j && j.site) ? [...new Set(S.maint.filter(t => (t.site || t.asset) && new RegExp(pad('M-', t.ref_no) + '(?!\\d)').test(d.notes || '') || t.id === d.maintenance_id).map(t => t.site || '').filter(Boolean))].join('\n') : '';
+  const loc = (inv ? (j && j.site) || mlocs || c.address || '' : d.site) || '', jdate = inv ? ((j && j.completion_date) || d.issue_date || '') : '', jnum = inv && j ? pad('J-', j.job_no) : '';
   const tel = S.phone || '+9475 4276105 / +9470 6651029 (Whatsapp)', mail = S.email || 'connectprotechnologies11@gmail.com';
   const pn = S.prepName || 'Kanishka Kumarasinghe', pt = S.prepTitle || 'Executive', an = S.authName || 'Hansana Milinda', at = S.authTitle || 'Owner';
   const note = d.notes && !/^Created automatically/i.test(d.notes) ? d.notes : '';
