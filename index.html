@@ -490,8 +490,9 @@ function renderAiDraft() {
   <div class="foot"><button class="btn g" id="ai-cancel">Discard draft</button><button class="btn" id="ai-save">Confirm & save quotation</button></div></div>`;
   const tb=$('#ai-lines');
   
-const rowHtml=(l,i)=>`<tr data-i="${i}">
-<td style="width:12%"><select class="aik" style="width:100%">${KINDS.map(k=>`<option${k===l.kind?' selected':''}>${k}</option>`).join('')}</select></td>
+<CodeBlock language="javascript" editable>
+const rowHtml=(l,i)=>`DIL0`;
+</CodeBlock>
 <td style="width:38%;min-width:0">
 <textarea class="aid" rows="4" style="width:100%;min-height:90px;box-sizing:border-box;white-space:pre-wrap;overflow-wrap:anywhere;resize:vertical">${esc(l.description)}</textarea>
 <small style="display:block;white-space:normal;overflow-wrap:anywhere;color:${l.review?'#b45309':'#15803d'}">${l.review?'Review: '+esc(l.review_note||'Check details / price'):'Catalog matched / verify'}</small>
