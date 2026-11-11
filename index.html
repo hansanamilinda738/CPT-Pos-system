@@ -982,16 +982,20 @@ async function maintJob(id) {
   const {data, error} = await sb.from('jobs').insert({customer_id: r.customer_id, title: 'Maintenance: ' + r.title, description: [r.site, r.asset].filter(Boolean).join(' / ') || null,
     status: S.statuses[0], value: r.value || 0, labour_cost: r.labour_cost || 0, material_cost: r.material_cost || 0, transport_cost: r.transport_cost || 0, other_cost: r.other_cost || 0, priority: r.priority || 'Normal', received_date: today(), target_date: r.next_due, job_type: 'Maintenance', maintenance_id: r.id, notes: 'Created from maintenance task ' + pad('M-', r.ref_no)}).select('job_no').single();
   if (error) return toast('Failed: ' + error.message);
+  await sb.rpc('sync_maintenance_job', {p_mid: r.id});   // copy the task's labour / material / transport lines to the new job (needs SQL 021)
   await reload(); toast('Job ' + pad('J-', data.job_no) + ' created. The task is now In progress.'); list();
 }
-function maintInvoice(ids) {
+async function maintInvoice(ids) {
   const ts = ids.map(id => S.maint.find(x => x.id === id)).filter(Boolean);
   if (!ts.length) return toast('Select at least one maintenance task');
   const custs = [...new Set(ts.map(t => t.customer_id || ''))];
   if (custs.length > 1) return toast('Selected tasks belong to different customers. Select tasks of one customer for a single invoice.');
   if (!custs[0]) return toast('The selected tasks have no customer. Edit them and choose a customer first.');
-  const items = ts.map(t => ({kind: 'Other', description: t.title + ([t.site, t.asset].filter(Boolean).length ? ' - ' + [t.site, t.asset].filter(Boolean).join(' / ') : ''),
-    quantity: 1, unit: 'visit', unit_cost: +t.est_cost || 0, unit_price: +t.value || 0}));
+  // tasks that have labour / material / transport lines are invoiced line by line; tasks without lines stay one "visit" row
+  const {data: lis} = await sb.from('line_items').select('*').eq('parent_type', 'maintenance').in('parent_id', ts.map(t => t.id)).order('sort');
+  const items = ts.flatMap(t => { const mine = (lis || []).filter(l => l.parent_id === t.id);
+    return mine.length ? mine.map(l => ({kind: l.kind, description: t.title + ' - ' + l.description, quantity: l.quantity, unit: l.unit, unit_cost: l.unit_cost, unit_price: l.unit_price}))
+      : [{kind: 'Other', description: t.title + ([t.site, t.asset].filter(Boolean).length ? ' - ' + [t.site, t.asset].filter(Boolean).join(' / ') : ''), quantity: 1, unit: 'visit', unit_cost: +t.est_cost || 0, unit_price: +t.value || 0}]; });
   const notes = 'Maintenance: ' + ts.map(t => pad('M-', t.ref_no)).join(', ');
   S.msel = {}; go('invoices'); form(null, {customer_id: custs[0], items, notes});
 }
@@ -1031,7 +1035,7 @@ function dflt(f) {
 }
 async function form(row, pre) {
   const m = M[S.view];
-  const ptype = {quotations: 'quotation', jobs: 'job', invoices: 'invoice'}[S.view];
+  const ptype = {quotations: 'quotation', jobs: 'job', invoices: 'invoice', maintenance: 'maintenance'}[S.view];
   let existing = (pre && pre.items) || [], supPrice = 0;
   if (ptype && row) {
     const [li, su] = await Promise.all([sb.from('line_items').select('*').eq('parent_type', ptype).eq('parent_id', row.id).order('sort'),
@@ -1076,7 +1080,8 @@ async function form(row, pre) {
     };
     ed = itemsEditor(existing, onEd);
     const dsc = nm('description'), anchor = (dsc || nm('notes')).closest('.fld');
-    if (dsc) anchor.after(ed.el); else anchor.before(ed.el);
+    if (ptype === 'maintenance') nm('value').closest('.fld').before(ed.el);   // line table sits above the value / cost fields
+    else if (dsc) anchor.after(ed.el); else anchor.before(ed.el);
     ['discount', 'tax_rate'].forEach(n => { const e = nm(n); if (e) e.addEventListener('input', () => ed.update()); });
     ed.update();
   }
@@ -1104,7 +1109,7 @@ async function form(row, pre) {
       const rs = ed.read().sort((a, b) => krank(a.kind) - krank(b.kind) || a.sort - b.sort).map((r, i) => ({...r, sort: i}));
       // Use the workflow RPC to preserve line IDs and synchronize quotation materials to Item Supply.
       const {error: e2} = await sb.rpc('save_line_items', {p_type: ptype, p_id: pid, p_items: rs});
-      if (e2) return toast('Items not saved: ' + e2.message + ' (run SQL 015_sync_engine.sql in Supabase)');
+      if (e2) return toast('Items not saved: ' + e2.message + (ptype === 'maintenance' ? ' (run SQL 021_maintenance_line_items.sql in Supabase)' : ' (run SQL 015_sync_engine.sql in Supabase)'));
     }
     const qmsg = S.view === 'jobs' && o.job_type === 'Quotation' && !(row && row.quotation_id);
     $('#dlg').close(); toast(qmsg ? 'Job saved. A draft quotation was added to the Quotations tab.' : row ? 'Saved' : 'Created');
