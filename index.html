@@ -923,8 +923,9 @@ async function printDoc(type, id) {
   const sub = lines.reduce((a, x) => a + x.quantity * x.unit_price, 0), disc = +d.discount || 0, total = +d.amount || 0, tax = total - (sub - disc);
   const paid = (pay.data || []).reduce((a, p) => a + (+p.amount || 0), 0), no = inv ? inn(d) : qn(d);
   const date = inv ? d.issue_date : d.quote_date, second = inv ? d.due_date : (d.valid_until || (date ? new Date(new Date(date + 'T12:00:00').getTime() + 30 * 864e5).toISOString().slice(0, 10) : ''));
-  const mlocs = inv && !(j && j.site) ? [...new Set(S.maint.filter(t => (t.site || t.asset) && new RegExp(pad('M-', t.ref_no) + '(?!\\d)').test(d.notes || '') || t.id === d.maintenance_id).map(t => t.site || '').filter(Boolean))].join('\n') : '';
-  const loc = (inv ? (j && j.site) || mlocs || c.address || '' : d.site) || '', jdate = inv ? ((j && j.completion_date) || d.issue_date || '') : '', jnum = inv && j ? pad('J-', j.job_no) : '';
+  const mtasks = inv && !j ? S.maint.filter(t => new RegExp(pad('M-', t.ref_no) + '(?!\\d)').test(d.notes || '') || t.id === d.maintenance_id).sort((a, b) => String(b.title).length - String(a.title).length) : [], per = mtasks.length > 0;
+  const siteOf = x => { const t = mtasks.find(t => (x.description || '').startsWith(t.title)); return t ? (t.site || '') : ''; };
+  const loc = (inv ? (j && j.site) || '' : d.site) || '', jdate = inv ? ((j && j.completion_date) || d.issue_date || '') : '', jnum = inv && j ? pad('J-', j.job_no) : '';
   const tel = S.phone || '+9475 4276105 / +9470 6651029 (Whatsapp)', mail = S.email || 'connectprotechnologies11@gmail.com';
   const pn = S.prepName || 'Kanishka Kumarasinghe', pt = S.prepTitle || 'Executive', an = S.authName || 'Hansana Milinda', at = S.authTitle || 'Owner';
   const note = d.notes && !/^Created automatically/i.test(d.notes) ? d.notes : '';
@@ -936,8 +937,8 @@ async function printDoc(type, id) {
   const side = `<td rowspan="${span}" class="side">${jnum}</td><td rowspan="${span}" class="side">${br(loc)}</td><td rowspan="${span}" class="side">${esc(shortDate(jdate))}</td>`;
   let rows = '', first = true;
   groups.forEach((g, gi) => {
-    if (hasItems) { rows += `<tr class="gb">${first ? side : ''}<td colspan="3"><span class="nb">${String(gi + 1).padStart(2, '0')}</span>${gl[g.k]}</td><td class="r">${f2(g.rows.reduce((a, x) => a + x.quantity * x.unit_price, 0))}</td></tr>`; first = false; }
-    g.rows.forEach((x, i) => { rows += `<tr class="${i % 2 ? 'w' : 'g'}">${first ? side : ''}<td>${esc(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; first = false; });
+    if (hasItems) { rows += `<tr class="gb">${per ? '<td class="side"></td><td class="side"></td><td class="side"></td>' : first ? side : ''}<td colspan="3"><span class="nb">${String(gi + 1).padStart(2, '0')}</span>${gl[g.k]}</td><td class="r">${f2(g.rows.reduce((a, x) => a + x.quantity * x.unit_price, 0))}</td></tr>`; first = false; }
+    g.rows.forEach((x, i) => { rows += `<tr class="${i % 2 ? 'w' : 'g'}">${per ? `<td class="side"></td><td class="side" style="vertical-align:middle">${br(siteOf(x))}</td><td class="side" style="vertical-align:middle">${esc(shortDate(jdate))}</td>` : first ? side : ''}<td>${esc(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; first = false; });
   });
   const tr = (label, val) => `<tr class="sm"><td colspan="6" class="r">${label}</td><td class="r">${val}</td></tr>`;
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(no)}</title><style>
