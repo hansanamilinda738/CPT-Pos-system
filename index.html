@@ -880,6 +880,11 @@ async function jobInvoiceItems(jid) {
     sb.from('supplies').select('*').eq('job_id', jid).is('deleted_at', null).order('supply_no')]);
   const rows = (li.data || []).filter(x => x.kind !== 'Expense').map(x => ({kind: x.kind, description: x.description, quantity: x.quantity, unit: x.unit, unit_cost: x.unit_cost, unit_price: x.unit_price}))
     .concat((su.data || []).map(x => ({kind: 'Material', description: x.item, quantity: x.quantity, unit: x.unit, unit_cost: x.unit_cost, unit_price: x.unit_price})));
+  const jj = S.jobs.find(x => x.id === jid);
+  if (jj && jj.maintenance_id && !(li.data || []).length) {   // maintenance job that has no copied lines yet: take the task's own lines
+    const {data: ml} = await sb.from('line_items').select('*').eq('parent_type', 'maintenance').eq('parent_id', jj.maintenance_id).order('sort');
+    rows.unshift(...(ml || []).filter(x => x.kind !== 'Expense').map(x => ({kind: x.kind, description: x.description, quantity: x.quantity, unit: x.unit, unit_cost: x.unit_cost, unit_price: x.unit_price})));
+  }
   if (!rows.length) { const j = S.jobs.find(x => x.id === jid); if (j && +j.value > 0) rows.push({kind: 'Other', description: j.title, quantity: 1, unit: 'job', unit_cost: 0, unit_price: +j.value}); }
   return rows;
 }
@@ -1105,6 +1110,13 @@ async function form(row, pre) {
   if (S.view === 'invoices') {
     const js = nm('job_id');
     js.onchange = async () => { if (!row && ed.isEmpty() && js.value) ed.setRows(await jobInvoiceItems(js.value)); };
+    const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'btn g s'; pb.style.marginTop = '6px';
+    pb.textContent = 'Pull all charges from the job (line by line)';
+    pb.onclick = async () => { if (!js.value) return toast('Select a job first');
+      const rs = await jobInvoiceItems(js.value);
+      if (!rs.length || (rs.length === 1 && rs[0].unit === 'job')) return toast('This job has no charge lines yet. Add Material / Labour / Transport lines on the job first.');
+      if (ed.isEmpty() || confirm('Replace the current invoice lines with all ' + rs.length + ' charge lines of this job?')) { ed.setRows(rs); toast(rs.length + ' charge lines loaded'); } };
+    js.closest('.fld').appendChild(pb);
   }
   const cs = nm('customer_id'), si = nm('site');
   if (cs && si) cs.addEventListener('change', () => { const c = S.cust.find(x => x.id === cs.value); if (c && c.address && !si.value) si.value = c.address; });
