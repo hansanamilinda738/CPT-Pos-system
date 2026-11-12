@@ -315,7 +315,7 @@ const M = {
     cols: [['job_no','Job',r => pad('J-', r.job_no)],['site','Site / location',r => r.site ? `<b>${esc(r.site)}</b>` : '<span style="opacity:.5">No location</span>'],['title','Title'],['customer_id','Customer',r => esc(cname(r.customer_id))],
       ['project_id','Project',r => esc(pname(r.project_id))],['job_type','Type'],['status','Status',r => pill(r.status)],['progress','Progress',r => `<div class="pgw"><div class="pgb"><i style="width:${+r.progress || 0}%"></i></div>${+r.progress || 0}%</div>`],['target_date','Target'],['value','Value',r => money(r.value),1],
       ['cost','Cost',r => money(jcost(r)),1],['profit','Profit',r => profit(r.value, jcost(r)),1]],
-    f: [['customer_id','Customer','cust'],['site','Site / location','text'],['technician','Assigned technician(s)','text'],['project_id','Project','proj'],['title','Job title','text',1],['job_type','Job type','select:Direct,Quotation,Project,Maintenance'],['maintenance_id','Maintenance task','maint'],['description','Description','textarea'],
+    f: [['customer_id','Customer','cust'],['site','Site / location','text'],['technician','Assigned technician(s)','text'],['project_id','Project','proj'],['title','Job title','text',1],['job_type','Job type','select:Direct,Quotation,Maintenance'],['maintenance_id','Maintenance task','maint'],['description','Description','textarea'],
       ['status','Status','status'],['progress','Progress (%)','number'],['priority','Priority','select:Low,Normal,High,Urgent'],
       ['received_date','Received date','date'],['target_date','Target date','date'],['completion_date','Completion date','date'],
       ['value','Job value (LKR)','number'],...costF,['notes','Internal notes','textarea']]},
@@ -1388,12 +1388,17 @@ async function form(row, pre) {
   if (S.view === 'jobs') {
     const jt = $('#df [name=job_type]'), stt = $('#df [name=status]'), hint = document.createElement('div');
     hint.className = 'full mu'; hint.style.fontSize = '13px'; jt.closest('.fld').after(hint);
-    const upd = () => { hint.innerHTML = jt.value === 'Quotation' && !(row && row.quotation_id) ? ic('quote', 14) + ' A draft quotation will be created automatically in the Quotations tab.' : jt.value === 'Project' && !nm('project_id').value ? ic('job', 14) + ' A project will be created automatically in the Projects tab with this job\'s details.' : ''; };
-    nm('project_id').addEventListener('change', () => jt.onchange && upd());
+    const upd = () => { hint.innerHTML = jt.value === 'Quotation' && !(row && row.quotation_id) ? ic('quote', 14) + ' A draft quotation will be created automatically in the Quotations tab.'  : ''; };
     jt.onchange = () => { upd();
       if (jt.value === 'Quotation' && S.statuses.includes('Quotation') && !(row && row.quotation_id) && stt.value === S.statuses[0]) stt.value = 'Quotation';
       else if (jt.value !== 'Quotation' && stt.value === 'Quotation' && !(row && row.quotation_id)) stt.value = S.statuses[0]; };
     upd();
+    // "Create a project from this job": ticked by default for a new job; the project gets its customer, title, description, dates, priority, technician and notes from this job, and the job is linked to it
+    const pf = nm('project_id'), mkw = document.createElement('div'); mkw.className = 'fld full';
+    mkw.innerHTML = `<label style="display:flex;gap:10px;align-items:center;cursor:pointer;font-weight:600"><input type="checkbox" id="mkproj" style="width:auto"${row ? '' : ' checked'}> Also create a project from this job (it appears in the Projects tab with this job's details)</label>`;
+    pf.closest('.fld').after(mkw);
+    const mkSync = () => { mkw.style.display = !pf.value && jt.value !== 'Maintenance' ? '' : 'none'; };
+    pf.addEventListener('change', mkSync); jt.addEventListener('change', mkSync); setTimeout(mkSync, 0);
     const mf = $('#df [name=maintenance_id]'), mfld = mf.closest('.fld');
     const sync = () => { const on = jt.value === 'Maintenance'; mfld.style.display = on ? '' : 'none'; if (!on) mf.value = ''; const dl = nm('description').closest('.fld').querySelector('label'); if (dl) dl.textContent = on ? 'Complaint / maintenance description' : 'Description'; };
     const jt0 = jt.onchange; jt.onchange = () => { jt0(); sync(); };
@@ -1441,7 +1446,7 @@ async function form(row, pre) {
     if (S.view === 'invoices') { if (jb) o.customer_id = jb.customer_id; else if (preCust) o.customer_id = preCust; else return toast('Select a job'); }
     if (S.view === 'jobs' && o.job_type !== 'Maintenance') o.maintenance_id = null;
     let newProj = null;
-    if (S.view === 'jobs' && o.job_type === 'Project' && !o.project_id) {   // a job marked as a Project creates its project automatically (the job carries the money, so the project value stays 0)
+    if (S.view === 'jobs' && o.job_type !== 'Maintenance' && !o.project_id && $('#mkproj') && $('#mkproj').checked) {   // creates the project from this job's data (the job carries the money, so the project value stays 0 and is summed from its jobs)
       const po = {customer_id: o.customer_id, name: o.title, description: o.description, status: o.status, priority: o.priority || 'Normal', progress: o.progress || 0, received_date: o.received_date, target_date: o.target_date, completion_date: o.completion_date, manager: o.technician, notes: o.notes, value: 0};
       let pr = await sb.from('projects').insert(po).select('id,project_no').single();
       if (pr.error && /status/.test(pr.error.message)) { delete po.status; pr = await sb.from('projects').insert(po).select('id,project_no').single(); }
