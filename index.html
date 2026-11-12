@@ -1018,7 +1018,7 @@ function itemsEditor(rows, onChange, kinds) {
   kinds = kinds || KINDS;
   const w = document.createElement('div'); w.className = 'full';
   w.innerHTML = `<h3 style="margin-bottom:8px">Items, labour and costs</h3><div class="ct tw li"><table><thead><tr><th>Type</th><th>Description</th><th>Qty</th><th>Unit</th><th>Unit cost</th><th>Unit price</th><th class="a">Total</th><th class="a">Profit</th><th></th></tr></thead><tbody></tbody></table></div><div class="lsum" style="display:flex;gap:18px;flex-wrap:wrap;font-weight:600;margin:8px 0"></div>
-    <div class="liact"><button type="button" class="btn g s" data-add>${ic('plus', 14)} Add line</button><button type="button" class="btn g s" data-addloc title="Adds a location heading (e.g. Kandy). Put that location's Labour, charges and Transport lines under it. It prints as a heading.">${ic('plus', 14)} Add location</button><button type="button" class="btn g s" data-addexp title="Internal expense: counted in total cost and profit, NOT shown on the quotation or invoice">${ic('plus', 14)} Add expense</button><button type="button" class="btn g s" data-addtr title="Adds a Transport line at the default rate">${ic('plus', 14)} Transport</button><button type="button" class="btn g s" data-addlab title="Adds Engineer charge and Technician charge as Labour lines">${ic('plus', 14)} Engineer + Technician</button><span class="mu" style="font-size:12.5px">Choose an item from your catalog to fill the price automatically. The totals above are calculated from these lines.</span></div>
+    <div class="liact"><button type="button" class="btn g s" data-add>${ic('plus', 14)} Add line</button><button type="button" class="btn g s" data-addloc title="Adds a location heading (e.g. Kandy). Put that location's Labour, charges and Transport lines under it. It prints as a heading.">${ic('plus', 14)} Add location</button><button type="button" class="btn g s" data-addtask title="Adds a task heading under a location (e.g. CCTV service). Put that task's Labour, charges and Transport lines under it. The task name prints once.">${ic('plus', 14)} Add task</button><button type="button" class="btn g s" data-addexp title="Internal expense: counted in total cost and profit, NOT shown on the quotation or invoice">${ic('plus', 14)} Add expense</button><button type="button" class="btn g s" data-addtr title="Adds a Transport line at the default rate">${ic('plus', 14)} Transport</button><button type="button" class="btn g s" data-addlab title="Adds Engineer charge and Technician charge as Labour lines">${ic('plus', 14)} Engineer + Technician</button><span class="mu" style="font-size:12.5px">Choose an item from your catalog to fill the price automatically. The totals above are calculated from these lines.</span></div>
     <datalist id="itemlist">${S.items.map(i => `<option value="${esc(i.name)}"></option>`).join('')}</datalist>`;
   const tb = w.querySelector('tbody');
   const rowH = r => `<tr data-line-id="${esc(r.id || '')}"><td><select class="lk">${kinds.map(k => `<option${(r.kind || 'Material') === k ? ' selected' : ''}>${k}</option>`).join('')}</select></td><td><input class="ld" list="itemlist" value="${esc(r.description || '')}" placeholder="Item or service"></td><td><input class="lq" type="number" step="0.01" min="0" value="${r.quantity ?? 1}"></td><td><input class="lu" value="${esc(r.unit || 'pcs')}"></td><td><input class="lc" type="number" step="0.01" min="0" value="${r.unit_cost ?? 0}"></td><td><input class="lp" type="number" step="0.01" min="0" value="${r.unit_price ?? 0}"></td><td class="lt a"></td><td class="lpf a"></td><td><button type="button" class="btn g s lx" title="Remove line" aria-label="Remove line">${ic('x', 14)}</button></td></tr>`;
@@ -1041,6 +1041,7 @@ function itemsEditor(rows, onChange, kinds) {
     upd(); });
   tb.addEventListener('change', upd);
   tb.addEventListener('click', e => { const b = e.target.closest('.lx'); if (b) { b.closest('tr').remove(); upd(); } });
+  w.querySelector('[data-addtask]').onclick = () => { add({kind: 'Location', quantity: 1, unit: 'task', unit_cost: 0, unit_price: 0}); tb.lastElementChild.querySelector('.ld').focus(); upd(); };
   w.querySelector('[data-addloc]').onclick = () => { add({kind: 'Location', quantity: 1, unit: 'loc', unit_cost: 0, unit_price: 0}); tb.lastElementChild.querySelector('.ld').focus(); upd(); };
   w.querySelector('[data-addexp]').onclick = () => { add({kind: 'Expense', quantity: 1, unit: 'lot', unit_cost: 0, unit_price: 0}); tb.lastElementChild.querySelector('.ld').focus(); upd(); };
   w.querySelector('[data-addtr]').onclick = () => { if (![...tb.rows].some(tr => q(tr, '.lk').value === 'Transport' && /^transport/i.test(q(tr, '.ld').value))) add({...RATES.transport, quantity: 1}); upd(); };
@@ -1068,8 +1069,9 @@ async function jobInvoiceItems(jid) {
     const {data: ml} = await sb.from('line_items').select('*').eq('parent_type', 'maintenance').eq('parent_id', jj.maintenance_id).order('sort');
     rows.unshift(...(ml || []).filter(x => x.kind !== 'Expense').map(x => ({kind: x.kind, description: x.description, quantity: x.quantity, unit: x.unit, unit_cost: x.unit_cost, unit_price: x.unit_price})));
   }
-  if (jj && (jj.maintenance_id || jj.job_type === 'Maintenance') && rows.length && !rows.some(x => x.kind === 'Location')) {   // maintenance invoice: group the lines under their location heading
-    const mt = S.maint.find(x => x.id === jj.maintenance_id), sn = ((mt && mt.site) || jj.site || '').trim();
+  if (jj && (jj.maintenance_id || jj.job_type === 'Maintenance') && rows.length && !rows.some(x => x.kind === 'Location')) {   // maintenance invoice: location heading, then the task name once
+    const mt = S.maint.find(x => x.id === jj.maintenance_id) || {}, sn = (mt.site || jj.site || '').trim();
+    if (mt.title) rows.unshift({kind: 'Location', description: mt.title + (mt.asset ? ' (' + mt.asset + ')' : ''), quantity: 1, unit: 'task', unit_cost: 0, unit_price: 0});
     if (sn) rows.unshift({kind: 'Location', description: sn, quantity: 1, unit: 'loc', unit_cost: 0, unit_price: 0});
   }
   if (!rows.length) { const j = S.jobs.find(x => x.id === jid); if (j && +j.value > 0) rows.push({kind: 'Other', description: j.title, quantity: 1, unit: 'job', unit_cost: 0, unit_price: +j.value}); }
@@ -1136,14 +1138,33 @@ async function printDoc(type, id) {
   const mtasks = !j ? S.maint.filter(t => new RegExp(pad('M-', t.ref_no) + '(?!\\d)').test(d.notes || '') || t.id === d.maintenance_id).sort((a, b) => String(b.title).length - String(a.title).length) : [], per = mtasks.length > 0;
   const siteOf = x => { const t = mtasks.find(t => (x.description || '').startsWith(t.title)); return t ? [t.site, t.asset].filter(Boolean).join(' / ') : ''; };
   // location-grouped layout: a heading per location, then its Labour, Charges and Transport lines
+  const mtAll = (S.maint || []).slice().sort((a, b) => String(b.title).length - String(a.title).length);
+  // "Task - line" (older invoices): split the task name off so it prints once instead of on every line
+  const taskOf = desc => { for (const t of mtAll) { const nm = t.title + (t.asset ? ' (' + t.asset + ')' : ''); for (const pf of [nm, t.title]) if ((desc || '').startsWith(pf + ' - ')) return {t, name: nm, rest: desc.slice(pf.length + 3)}; } return null; };
   const gm = (() => {
     if (!hasItems) return null;
     const ord = {Labour: 0, Material: 1, Other: 2, Transport: 3}, locs = [];
-    if (hasLoc) { let cur = null; lines.forEach(x => { if (x.kind === 'Location') { cur = {name: x.description, rows: []}; locs.push(cur); } else { if (!cur) { cur = {name: '', rows: []}; locs.push(cur); } cur.rows.push(x); } }); }
-    else if (!per && inv && j && (j.maintenance_id || j.job_type === 'Maintenance') && (((S.maint.find(x => x.id === j.maintenance_id) || {}).site || j.site || '').trim())) locs.push({name: ((S.maint.find(x => x.id === j.maintenance_id) || {}).site || j.site).trim(), rows: lines.slice()});
-    else if (per) { const mp = new Map(); lines.forEach(x => { const t = mtasks.find(t => (x.description || '').startsWith(t.title)), n = (t && (t.site || '').trim()) || ''; if (!mp.has(n)) mp.set(n, {name: n, rows: []}); mp.get(n).rows.push(x); }); if (![...mp.keys()].some(Boolean)) return null; locs.push(...mp.values()); }
-    else return null;
-    locs.forEach(L => L.rows.sort((a, b) => (ord[a.kind] ?? 2) - (ord[b.kind] ?? 2)));
+    const task = (L, name, ex) => { let T = !ex && L.tasks.find(x => x.name === name && !x.ex); if (!T) { T = {name, rows: [], ex: !!ex}; L.tasks.push(T); } return T; };
+    if (hasLoc) {
+      let cur = null, tk = null;
+      const need = () => { if (!cur) { cur = {name: '', tasks: []}; locs.push(cur); } return cur; };
+      lines.forEach(x => {
+        if (x.kind === 'Location' && x.unit === 'task') { tk = task(need(), x.description, true); }
+        else if (x.kind === 'Location') { cur = {name: x.description, tasks: []}; locs.push(cur); tk = null; }
+        else if (tk) tk.rows.push(x);
+        else { const o = taskOf(x.description); if (o) task(need(), o.name).rows.push({...x, description: o.rest}); else task(need(), '').rows.push(x); }
+      });
+    } else if (per) {
+      const mp = new Map();
+      lines.forEach(x => { const o = taskOf(x.description), t = o ? o.t : mtasks.find(t => (x.description || '').startsWith(t.title)), n = (t && (t.site || '').trim()) || '';
+        if (!mp.has(n)) mp.set(n, {name: n, tasks: []}); task(mp.get(n), o ? o.name : '').rows.push(o ? {...x, description: o.rest} : x); });
+      if (![...mp.keys()].some(Boolean)) return null; locs.push(...mp.values());
+    } else if (inv && j && (j.maintenance_id || j.job_type === 'Maintenance')) {
+      const mt = S.maint.find(x => x.id === j.maintenance_id) || {}, sn = (mt.site || j.site || '').trim();
+      if (!sn) return null;
+      locs.push({name: sn, tasks: [{name: mt.title ? mt.title + (mt.asset ? ' (' + mt.asset + ')' : '') : '', rows: lines.slice()}]});
+    } else return null;
+    locs.forEach(L => L.tasks.forEach(T => T.rows.sort((a, b) => (ord[a.kind] ?? 2) - (ord[b.kind] ?? 2))));
     return locs.length ? locs : null;
   })();
   const loc = (inv ? (j && j.site) || '' : d.site) || '', jdate = inv ? ((j && j.completion_date) || d.issue_date || '') : '', jnum = inv && j ? pad('J-', j.job_no) : '';
@@ -1160,10 +1181,13 @@ async function printDoc(type, id) {
   if (gm) {
     const catL = {Labour: 'Labour', Material: 'Charges', Other: 'Charges', Transport: 'Transport'};
     gm.forEach((L, li) => {
-      rows += `<tr class="gb"><td colspan="3"><span class="nb">${String(li + 1).padStart(2, '0')}</span>${esc(L.name || 'General')}</td><td class="r">${f2(L.rows.reduce((a, x) => a + x.quantity * x.unit_price, 0))}</td></tr>`;
-      let prev = '', i = 0;
-      L.rows.forEach(x => { const cat = catL[x.kind] || 'Charges'; if (cat !== prev) { rows += `<tr class="sb"><td colspan="4">${cat}</td></tr>`; prev = cat; i = 0; }
-        rows += `<tr class="${i++ % 2 ? 'w' : 'g'}"><td>${esc(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; });
+      rows += `<tr class="gb"><td colspan="3"><span class="nb">${String(li + 1).padStart(2, '0')}</span>${esc(L.name || 'General')}</td><td class="r">${f2(L.tasks.reduce((a, T) => a + T.rows.reduce((b, x) => b + x.quantity * x.unit_price, 0), 0))}</td></tr>`;
+      L.tasks.forEach(T => {
+        if (T.name) rows += `<tr class="tk"><td colspan="4">${esc(T.name)}</td></tr>`;
+        let prev = '', i = 0;
+        T.rows.forEach(x => { const cat = catL[x.kind] || 'Charges'; if (cat !== prev) { rows += `<tr class="sb"><td colspan="4">${cat}</td></tr>`; prev = cat; i = 0; }
+          rows += `<tr class="${i++ % 2 ? 'w' : 'g'}"><td>${esc(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; });
+      });
     });
   }
   if (!gm) groups.forEach((g, gi) => {
@@ -1180,7 +1204,7 @@ async function printDoc(type, id) {
 table.it{width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:11px}table.it th{background:#073763;color:#fff;padding:5px 6px;font-weight:700;text-align:center;border:1px solid #073763}
 table.it td{padding:3px 7px;border:1px solid #8a97a6;vertical-align:middle}tr.g td{background:#f0f0f0}tr.w td{background:#fff}.c{text-align:center}.r{text-align:right}td.side{background:#fff!important;vertical-align:top;text-align:center;font-weight:700;color:#073763}
 tr.gb td{background:#dbe6f3;color:#073763;font-weight:700;font-style:italic;border-color:#8a97a6}.nb{display:inline-block;background:#073763;color:#fff;border-radius:3px;padding:0 7px;margin-right:9px;font-style:normal;font-size:10px;line-height:16px}
-tr.sb td{background:#fff;color:#5b6b7d;font-style:italic;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px}tr.sm td{border:0;font-style:italic;font-weight:700;padding-top:3px}tr.tot td{background:#073763;color:#fff;font-weight:700;font-style:italic;border-color:#073763;font-size:13px;padding:6px 8px}tr.tot td.r{font-style:normal}
+tr.tk td{background:#fff;color:#073763;font-weight:700;font-size:11.5px;padding:5px 7px 2px;border-bottom:0}tr.sb td{background:#fff;color:#5b6b7d;font-style:italic;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px}tr.sm td{border:0;font-style:italic;font-weight:700;padding-top:3px}tr.tot td{background:#073763;color:#fff;font-weight:700;font-style:italic;border-color:#073763;font-size:13px;padding:6px 8px}tr.tot td.r{font-style:normal}
 .rm{margin-top:16px;border-left:4px solid #0ea5e9;background:#f6f9fc;padding:8px 12px;font-style:italic}.rm b{margin-right:10px;color:#073763}.bk{margin-top:8px;font-style:italic;padding-left:16px}.bk b{color:#073763}
 .sg{display:flex;justify-content:space-between;margin-top:24px;font-style:italic}.sg b{display:block;margin-bottom:12px;color:#073763}.sig{font-family:'Segoe Script','Brush Script MT','Lucida Handwriting',cursive;font-size:17px;font-style:italic;color:#0b3d75}
 .s2{text-align:center;font-style:normal;color:#555}.ft{margin:auto -10mm 0;background:#073763;color:#fff;font-style:italic;font-weight:700;padding:10px 12mm;margin-top:18px;display:flex;justify-content:space-between;gap:16px}</style></head>
@@ -1208,6 +1232,8 @@ async function maintDone(id) {
 }
 async function maintJob(id) {
   const r = S.rows.find(x => x.id === id);
+  const ex = (S.jobs || []).find(x => x.maintenance_id === id && !x.deleted_at);   // a job is already created automatically with the task: a 2nd one would duplicate every line
+  if (ex) { await sb.rpc('sync_maintenance_job', {p_mid: id}); return toast('Job ' + pad('J-', ex.job_no) + ' already exists for this task. No duplicate created.'); }
   const {data, error} = await sb.from('jobs').insert({customer_id: r.customer_id, title: 'Maintenance: ' + r.title, description: [r.site, r.asset].filter(Boolean).join(' / ') || null,
     status: S.statuses[0], value: r.value || 0, labour_cost: r.labour_cost || 0, material_cost: r.material_cost || 0, transport_cost: r.transport_cost || 0, other_cost: r.other_cost || 0, priority: r.priority || 'Normal', received_date: today(), target_date: r.next_due, job_type: 'Maintenance', maintenance_id: r.id, notes: 'Created from maintenance task ' + pad('M-', r.ref_no)}).select('job_no').single();
   if (error) return toast('Failed: ' + error.message);
@@ -1221,11 +1247,13 @@ function buildMaintItems(ts, lis) {
     const sn = (t.site || '').trim() || 'No location', nm = t.title + (t.asset ? ' (' + t.asset + ')' : '');
     if (!bySite.has(sn)) bySite.set(sn, []);
     const mine = (lis || []).filter(l => l.parent_id === t.id && l.kind !== 'Expense' && l.kind !== 'Location');
-    (mine.length ? mine.map(l => ({kind: l.kind, description: nm + ' - ' + l.description, quantity: l.quantity, unit: l.unit, unit_cost: l.unit_cost, unit_price: l.unit_price}))
-      : [{kind: 'Other', description: nm, quantity: 1, unit: 'visit', unit_cost: +t.est_cost || 0, unit_price: +t.value || 0}]).forEach(x => bySite.get(sn).push(x));
+    const rows = (mine.length ? mine.map(l => ({kind: l.kind, description: l.description, quantity: l.quantity, unit: l.unit, unit_cost: l.unit_cost, unit_price: l.unit_price}))
+      : [{kind: 'Other', description: 'Service charge', quantity: 1, unit: 'visit', unit_cost: +t.est_cost || 0, unit_price: +t.value || 0}])
+      .sort((a, b) => (order[a.kind] ?? 2) - (order[b.kind] ?? 2));
+    bySite.get(sn).push({kind: 'Location', description: nm, quantity: 1, unit: 'task', unit_cost: 0, unit_price: 0}, ...rows);   // the task name is a heading row: printed once, not on every line
   });
   const items = [];
-  bySite.forEach((rows, sn) => { items.push({kind: 'Location', description: sn, quantity: 1, unit: 'loc', unit_cost: 0, unit_price: 0}); items.push(...rows.sort((a, b) => (order[a.kind] ?? 2) - (order[b.kind] ?? 2))); });
+  bySite.forEach((rows, sn) => { items.push({kind: 'Location', description: sn, quantity: 1, unit: 'loc', unit_cost: 0, unit_price: 0}); items.push(...rows); });
   return items;
 }
 async function maintDoc(ids, what) {
