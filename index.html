@@ -389,7 +389,8 @@ async function loadItems() {
 }
 async function loadMaint() {
   const q = c => sb.from('maintenance').select(c).is('deleted_at', null).order('ref_no');
-  let r = await q('id,ref_no,title,customer_id,site,asset,est_cost,value,frequency,next_due,status');
+  let r = await q('id,ref_no,title,customer_id,site,asset,est_cost,value,frequency,next_due,status,completion_date,last_done');
+  if (r.error) r = await q('id,ref_no,title,customer_id,site,asset,est_cost,value,frequency,next_due,status');
   if (r.error) r = await q('id,ref_no,title,customer_id,est_cost,value,frequency,next_due,status');
   if (r.error) r = await q('id,ref_no,title,customer_id,est_cost,frequency,next_due,status');
   S.maint = r.data || [];
@@ -1018,10 +1019,15 @@ function itemsEditor(rows, onChange, kinds) {
   kinds = kinds || KINDS;
   const w = document.createElement('div'); w.className = 'full';
   w.innerHTML = `<h3 style="margin-bottom:8px">Items, labour and costs</h3><div class="ct tw li"><table><thead><tr><th>Type</th><th>Description</th><th>Qty</th><th>Unit</th><th>Unit cost</th><th>Unit price</th><th class="a">Total</th><th class="a">Profit</th><th></th></tr></thead><tbody></tbody></table></div><div class="lsum" style="display:flex;gap:18px;flex-wrap:wrap;font-weight:600;margin:8px 0"></div>
-    <div class="liact"><button type="button" class="btn g s" data-add>${ic('plus', 14)} Add line</button><button type="button" class="btn g s" data-addloc title="Adds a location heading (e.g. Kandy). Put that location's Labour, charges and Transport lines under it. It prints as a heading.">${ic('plus', 14)} Add location</button><button type="button" class="btn g s" data-addtask title="Adds a task heading under a location (e.g. CCTV service). Put that task's Labour, charges and Transport lines under it. The task name prints once.">${ic('plus', 14)} Add task</button><button type="button" class="btn g s" data-addexp title="Internal expense: counted in total cost and profit, NOT shown on the quotation or invoice">${ic('plus', 14)} Add expense</button><button type="button" class="btn g s" data-addtr title="Adds a Transport line at the default rate">${ic('plus', 14)} Transport</button><button type="button" class="btn g s" data-addlab title="Adds Engineer charge and Technician charge as Labour lines">${ic('plus', 14)} Engineer + Technician</button><span class="mu" style="font-size:12.5px">Choose an item from your catalog to fill the price automatically. The totals above are calculated from these lines.</span></div>
+    <div class="liact"><button type="button" class="btn g s" data-add>${ic('plus', 14)} Add line</button><button type="button" class="btn g s" data-addloc title="Adds a location heading. Pick it from the saved location list (or type a new one). Put that location's Labour, charges and Transport lines under it. It prints as a heading.">${ic('plus', 14)} Add location</button><button type="button" class="btn g s" data-addtask title="Adds a task heading under a location. Pick it from your maintenance tasks (or type a new one). Put that task's Labour, charges and Transport lines under it. The task name prints once.">${ic('plus', 14)} Add task</button><button type="button" class="btn g s" data-addexp title="Internal expense: counted in total cost and profit, NOT shown on the quotation or invoice">${ic('plus', 14)} Add expense</button><button type="button" class="btn g s" data-addtr title="Adds a Transport line at the default rate">${ic('plus', 14)} Transport</button><button type="button" class="btn g s" data-addlab title="Adds Engineer charge and Technician charge as Labour lines">${ic('plus', 14)} Engineer + Technician</button><span class="mu" style="font-size:12.5px">Choose an item from your catalog to fill the price automatically. The totals above are calculated from these lines.</span></div>
     <datalist id="itemlist">${S.items.map(i => `<option value="${esc(i.name)}"></option>`).join('')}</datalist>`;
   const tb = w.querySelector('tbody');
-  const rowH = r => `<tr data-line-id="${esc(r.id || '')}"><td><select class="lk">${kinds.map(k => `<option${(r.kind || 'Material') === k ? ' selected' : ''}>${k}</option>`).join('')}</select></td><td><input class="ld" list="itemlist" value="${esc(r.description || '')}" placeholder="Item or service"></td><td><input class="lq" type="number" step="0.01" min="0" value="${r.quantity ?? 1}"></td><td><input class="lu" value="${esc(r.unit || 'pcs')}"></td><td><input class="lc" type="number" step="0.01" min="0" value="${r.unit_cost ?? 0}"></td><td><input class="lp" type="number" step="0.01" min="0" value="${r.unit_price ?? 0}"></td><td class="lt a"></td><td class="lpf a"></td><td><button type="button" class="btn g s lx" title="Remove line" aria-label="Remove line">${ic('x', 14)}</button></td></tr>`;
+  // Location / task heading rows get a dropdown built from the CURRENT maintenance tasks and saved locations (so renamed tasks / changed locations show up). "Type a different name" switches to free text.
+  const pickList = isTask => isTask ? [...new Set((S.maint || []).map(t => ((t.title || '').trim() + (t.asset ? ' (' + t.asset + ')' : '')).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)) : (S.sites || []).map(x => x.name).filter(Boolean);
+  const pickH = (isTask, cur) => { const l = pickList(isTask); if (cur && !l.includes(cur)) l.unshift(cur);
+    return `<select class="ld lpick" data-task="${isTask ? 1 : 0}"><option value="">${isTask ? '— Select a task —' : '— Select a location —'}</option>${l.map(x => `<option value="${esc(x)}"${x === cur ? ' selected' : ''}>${esc(x)}</option>`).join('')}<option value="__new__">＋ Type a different name…</option></select>`; };
+  const descH = r => (r.kind || '') === 'Location' ? pickH(r.unit === 'task', r.description || '') : `<input class="ld" list="itemlist" value="${esc(r.description || '')}" placeholder="Item or service">`;
+  const rowH = r => `<tr data-line-id="${esc(r.id || '')}"><td><select class="lk">${kinds.map(k => `<option${(r.kind || 'Material') === k ? ' selected' : ''}>${k}</option>`).join('')}</select></td><td>${descH(r)}</td><td><input class="lq" type="number" step="0.01" min="0" value="${r.quantity ?? 1}"></td><td><input class="lu" value="${esc(r.unit || 'pcs')}"></td><td><input class="lc" type="number" step="0.01" min="0" value="${r.unit_cost ?? 0}"></td><td><input class="lp" type="number" step="0.01" min="0" value="${r.unit_price ?? 0}"></td><td class="lt a"></td><td class="lpf a"></td><td><button type="button" class="btn g s lx" title="Remove line" aria-label="Remove line">${ic('x', 14)}</button></td></tr>`;
   const q = (tr, c) => tr.querySelector(c);
   // Preserve database IDs so quotation materials stay linked to their supply records.
   const read = () => [...tb.rows].map((tr, i) => ({id: tr.dataset.lineId || null, kind: q(tr, '.lk').value, description: q(tr, '.ld').value.trim(), quantity: +q(tr, '.lq').value || 0, unit: q(tr, '.lu').value.trim() || 'pcs', unit_cost: q(tr, '.lk').value === 'Location' ? 0 : (+q(tr, '.lc').value || 0), unit_price: ['Expense', 'Location'].includes(q(tr, '.lk').value) ? 0 : (+q(tr, '.lp').value || 0), sort: i})).filter(r => r.description);
@@ -1039,6 +1045,15 @@ function itemsEditor(rows, onChange, kinds) {
     if (e.target.classList.contains('ld')) { const it = S.items.find(x => x.name.toLowerCase() === e.target.value.trim().toLowerCase());
       if (it && !['Expense', 'Location'].includes(q(e.target.closest('tr'), '.lk').value)) { const tr = e.target.closest('tr'); q(tr, '.lk').value = KINDS.includes(it.kind) ? it.kind : 'Material'; q(tr, '.lu').value = it.unit || 'pcs'; q(tr, '.lc').value = it.unit_cost; q(tr, '.lp').value = it.unit_price; } }
     upd(); });
+  tb.addEventListener('change', e => {
+    const t = e.target, tr = t.closest('tr'); if (!tr) return;
+    if (t.classList.contains('lpick') && t.value === '__new__') { const inp = document.createElement('input'); inp.className = 'ld'; inp.placeholder = t.dataset.task === '1' ? 'Task name' : 'Location name'; t.replaceWith(inp); inp.focus(); }
+    if (t.classList.contains('lk')) {   // switching the Type to / from Location swaps the description between dropdown and text box
+      const cell = q(tr, '.ld').closest('td'), cur = q(tr, '.ld').value.trim(), lu = q(tr, '.lu');
+      if (t.value === 'Location') { if (lu.value !== 'task' && lu.value !== 'loc') lu.value = 'loc'; cell.innerHTML = pickH(lu.value === 'task', cur); }
+      else if (!cell.querySelector('input.ld')) cell.innerHTML = `<input class="ld" list="itemlist" value="${esc(cur)}" placeholder="Item or service">`;
+    }
+  });
   tb.addEventListener('change', upd);
   tb.addEventListener('click', e => { const b = e.target.closest('.lx'); if (b) { b.closest('tr').remove(); upd(); } });
   w.querySelector('[data-addtask]').onclick = () => { add({kind: 'Location', quantity: 1, unit: 'task', unit_cost: 0, unit_price: 0}); tb.lastElementChild.querySelector('.ld').focus(); upd(); };
@@ -1167,7 +1182,13 @@ async function printDoc(type, id) {
     locs.forEach(L => L.tasks.forEach(T => T.rows.sort((a, b) => (ord[a.kind] ?? 2) - (ord[b.kind] ?? 2))));
     return locs.length ? locs : null;
   })();
-  const loc = (inv ? (j && j.site) || '' : d.site) || '', jdate = inv ? ((j && j.completion_date) || d.issue_date || '') : '', jnum = inv && j ? pad('J-', j.job_no) : '';
+  // Invoices print the date the work was COMPLETED (job completion date, or the maintenance task's completed date); the issue date is only a fallback.
+  const tkName = t => t.title + (t.asset ? ' (' + t.asset + ')' : '');
+  const doneOfTask = nm => { const t = mtAll.find(t => nm === tkName(t) || nm === t.title); return t ? mdone(t) : ''; };
+  const dateOfLine = x => { const t = mtasks.find(t => (x.description || '').startsWith(t.title)); return t ? mdone(t) : ''; };
+  const cdate = !inv ? date : (j && j.completion_date ? String(j.completion_date).slice(0, 10) : '')
+    || [...(gm ? gm.flatMap(L => L.tasks.map(T => doneOfTask(T.name))) : []), ...mtasks.map(mdone), ...(j && j.maintenance_id ? [mdone(S.maint.find(x => x.id === j.maintenance_id) || {})] : [])].filter(Boolean).sort().pop() || d.issue_date || '';
+  const loc = (inv ? (j && j.site) || '' : d.site) || '', jdate = inv ? cdate : '', jnum = inv && j ? pad('J-', j.job_no) : '';
   const tel = S.phone || '+9475 4276105 / +9470 6651029 (Whatsapp)', mail = S.email || 'connectprotechnologies11@gmail.com';
   const pn = S.prepName || 'Kanishka Kumarasinghe', pt = S.prepTitle || 'Executive', an = S.authName || 'Hansana Milinda', at = S.authTitle || 'Owner';
   const note = d.notes && !/^Created automatically/i.test(d.notes) ? d.notes : '';
@@ -1183,7 +1204,7 @@ async function printDoc(type, id) {
     gm.forEach((L, li) => {
       rows += `<tr class="gb"><td colspan="3"><span class="nb">${String(li + 1).padStart(2, '0')}</span>${esc(L.name || 'General')}</td><td class="r">${f2(L.tasks.reduce((a, T) => a + T.rows.reduce((b, x) => b + x.quantity * x.unit_price, 0), 0))}</td></tr>`;
       L.tasks.forEach(T => {
-        if (T.name) rows += `<tr class="tk"><td colspan="4">${esc(T.name)}</td></tr>`;
+        if (T.name) rows += `<tr class="tk"><td colspan="4">${esc(T.name)}${inv ? `<span style="float:right;font-weight:400;font-style:italic;color:#5b6b7d">Completed : ${esc(shortDate(doneOfTask(T.name) || cdate))}</span>` : ''}</td></tr>`;
         let prev = '', i = 0;
         T.rows.forEach(x => { const cat = catL[x.kind] || 'Charges'; if (cat !== prev) { rows += `<tr class="sb"><td colspan="4">${cat}</td></tr>`; prev = cat; i = 0; }
           rows += `<tr class="${i++ % 2 ? 'w' : 'g'}"><td>${esc(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; });
@@ -1192,7 +1213,7 @@ async function printDoc(type, id) {
   }
   if (!gm) groups.forEach((g, gi) => {
     if (hasItems) { rows += `<tr class="gb">${per ? '<td class="side"></td><td class="side"></td><td class="side"></td>' : first ? side : ''}<td colspan="3"><span class="nb">${String(gi + 1).padStart(2, '0')}</span>${gl[g.k]}</td><td class="r">${f2(g.rows.reduce((a, x) => a + x.quantity * x.unit_price, 0))}</td></tr>`; first = false; }
-    g.rows.forEach((x, i) => { rows += `<tr class="${i % 2 ? 'w' : 'g'}">${per ? `<td class="side"></td><td class="side" style="vertical-align:middle">${br(siteOf(x))}</td><td class="side" style="vertical-align:middle">${esc(shortDate(jdate))}</td>` : first ? side : ''}<td>${esc(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; first = false; });
+    g.rows.forEach((x, i) => { rows += `<tr class="${i % 2 ? 'w' : 'g'}">${per ? `<td class="side"></td><td class="side" style="vertical-align:middle">${br(siteOf(x))}</td><td class="side" style="vertical-align:middle">${esc(shortDate((inv && dateOfLine(x)) || jdate))}</td>` : first ? side : ''}<td>${esc(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; first = false; });
   });
   const tr = (label, val) => `<tr class="sm"><td colspan="${gm ? 3 : 6}" class="r">${label}</td><td class="r">${val}</td></tr>`;
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(no)}</title><style>
@@ -1209,7 +1230,7 @@ tr.tk td{background:#fff;color:#073763;font-weight:700;font-size:11.5px;padding:
 .sg{display:flex;justify-content:space-between;margin-top:24px;font-style:italic}.sg b{display:block;margin-bottom:12px;color:#073763}.sig{font-family:'Segoe Script','Brush Script MT','Lucida Handwriting',cursive;font-size:17px;font-style:italic;color:#0b3d75}
 .s2{text-align:center;font-style:normal;color:#555}.ft{margin:auto -10mm 0;background:#073763;color:#fff;font-style:italic;font-weight:700;padding:10px 12mm;margin-top:18px;display:flex;justify-content:space-between;gap:16px}</style></head>
 <body><div class="pg"><img class="hd" src="${S.hdr || DEFAULT_HDR}" alt="">
-<div class="top"><div><div class="tt">${inv ? 'Invoice' : 'Quotation'}</div><div class="acc"></div></div><div class="meta"><div><span>${inv ? 'Invoice' : 'Quotation'} Number :</span><b>${esc(no)}</b></div><div><span>Date :</span><b>${longDate(date)}</b></div><div><span>${inv ? 'Due Date' : 'Valid Date'} :</span><b>${longDate(second)}</b></div></div></div>
+<div class="top"><div><div class="tt">${inv ? 'Invoice' : 'Quotation'}</div><div class="acc"></div></div><div class="meta"><div><span>${inv ? 'Invoice' : 'Quotation'} Number :</span><b>${esc(no)}</b></div><div><span>Date :</span><b>${longDate(cdate)}</b></div><div><span>${inv ? 'Due Date' : 'Valid Date'} :</span><b>${longDate(second)}</b></div></div></div>
 <div class="bar">Customer Detail</div><div class="cd"><div><b>Company/Customer Name :</b> ${esc(c.name || '')}</div><div><b>Address :</b> ${esc((c.address || '').replace(/\n/g, ', '))}</div><div><b>Contact Person :</b> ${esc(c.contact_person || '')}${c.phone ? ' &nbsp;(' + esc(c.phone) + ')' : ''}</div><div><b>E mail :</b> ${esc(c.email || '')}</div></div>
 <table class="it">${gm ? '<thead><tr><th>W/Performed</th><th style="width:9%">Qty</th><th style="width:16%">Charge (LKR)</th><th style="width:16%">Total (LKR)</th></tr></thead>' : '<thead><tr><th style="width:13%">Job Number</th><th style="width:15%">Location</th><th style="width:11%">Date</th><th>W/Performed</th><th style="width:7%">Qty</th><th style="width:13%">Charge (LKR)</th><th style="width:13%">Total (LKR)</th></tr></thead>'}<tbody>${rows}
 ${disc || Math.abs(tax) > 0.005 ? tr('Subtotal', f2(sub)) : ''}${disc ? tr('Discount', '- ' + f2(disc)) : ''}${Math.abs(tax) > 0.005 ? tr('Tax (' + (+d.tax_rate || 0) + '%)', f2(tax)) : ''}
