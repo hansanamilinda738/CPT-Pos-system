@@ -957,7 +957,7 @@ function acts(r) {
   if (S.view === 'jobs' || S.view === 'customers') h += `<button class="btn g s" data-v="${r.id}" title="Open full details" aria-label="Open details">${ic('eye', 15)}</button> `;
   if (S.view === 'jobs') {
     if (!['Completed','Invoiced','Paid'].includes(r.status)) h += `<button class="btn s" data-c="${r.id}">${ic('check', 14)} Complete</button> `;
-    if (['Completed','Invoiced'].includes(r.status)) h += `<button class="btn s" data-i="${r.id}">${ic('file', 14)} Invoice</button> `;
+    if (['Completed','Invoiced'].includes(r.status) && !(r.job_type === 'Maintenance' || r.maintenance_id)) h += `<button class="btn s" data-i="${r.id}">${ic('file', 14)} Invoice</button> `;
   }
   if (S.view === 'quotations') {
     if (r.status === 'Draft') h += `<button class="btn g s" data-qs="${r.id}">Mark as sent</button> `;
@@ -1262,8 +1262,12 @@ async function maintDone(id) {
   const r = S.rows.find(x => x.id === id), n = {Weekly: 7, Monthly: 1, Quarterly: 3, 'Half-yearly': 6, Yearly: 12}[r.frequency], o = {last_done: today()};
   if (!n) o.status = 'Completed';
   else { const d = new Date(); r.frequency === 'Weekly' ? d.setDate(d.getDate() + 7) : d.setMonth(d.getMonth() + n); o.next_due = d.toISOString().slice(0, 10); o.status = 'Assigned'; }
+  // the job(s) created from this task are completed too, so the Jobs tab matches (done first: the job trigger must not overwrite the task's next-due date)
+  const open = (S.jobs || []).filter(j => j.maintenance_id === id && !['Completed', 'Invoiced', 'Paid', 'Cancelled'].includes(j.status));
+  if (open.length) { const {error: je} = await sb.from('jobs').update({status: 'Completed', completion_date: today()}).in('id', open.map(j => j.id)); if (je) return toast('Job not completed: ' + je.message); }
   const {error} = await sb.from('maintenance').update(o).eq('id', id);
   if (error) return toast('Failed: ' + error.message);
+  await reload();
   toast(n ? 'Done. Next due ' + o.next_due : 'Task completed'); confetti(); list();
 }
 async function maintJob(id) {
