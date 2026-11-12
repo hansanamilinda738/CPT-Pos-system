@@ -288,6 +288,14 @@ const pj = r => S.jobs.filter(j => j.project_id === r.id);
 const cjobs = r => S.jobs.filter(j => j.customer_id === r.id).length;
 const cout = r => S.invs.filter(i => i.customer_id === r.id).reduce((a, i) => a + (+i.amount || 0) - (+i.paid || 0), 0);
 const mjobs = r => S.jobs.filter(j => j.maintenance_id === r.id).length;
+// which invoices belong to a maintenance task: linked directly, through its job, or listed in the invoice notes ("Maintenance: M-0001, M-0002")
+const mref = (t, notes) => new RegExp(pad('M-', t.ref_no) + '(?!\\d)').test(notes || '');
+const minvs = t => (S.invs || []).filter(i => i.maintenance_id === t.id || (i.job_id && S.jobs.some(j => j.id === i.job_id && j.maintenance_id === t.id)) || mref(t, i.notes));
+const minvPill = t => { const l = minvs(t); return l.length ? `<span class="pill Paid" title="${esc(l.map(inn).join(', '))}">Invoiced</span> <small>${esc(l.map(inn).join(', '))}</small>` : '<span class="pill Partial">Not invoiced</span>'; };
+// job number(s) shown on an invoice: its own job, or the jobs of the maintenance tasks it bills
+const invJobs = r => { if (r.job_id) return jno(r.job_id);
+  const ts = S.maint.filter(t => r.maintenance_id === t.id || mref(t, r.notes)), js = [...new Set(S.jobs.filter(j => ts.some(t => t.id === j.maintenance_id)).sort((a, b) => a.job_no - b.job_no).map(j => pad('J-', j.job_no)))];
+  return js.length ? js.join(', ') : ts.map(t => pad('M-', t.ref_no)).join(', '); };
 const mcode = id => { const x = S.maint.find(m => m.id === id); return x ? pad('M-', x.ref_no) : ''; };
 const pcost = r => jcost(r) + pj(r).reduce((a, j) => a + jcost(j), 0), pval = r => +r.value > 0 ? +r.value : pj(r).reduce((a, j) => a + +j.value, 0);
 const QUOTES = ['Every finished job is a promise kept. Keep them coming.', 'Small steps every day build big results.', 'Follow up today, and tomorrow’s invoice gets paid sooner.',
@@ -312,7 +320,7 @@ const M = {
       ['received_date','Received date','date'],['target_date','Target date','date'],['completion_date','Completion date','date'],
       ['value','Job value (LKR)','number'],...costF,['notes','Internal notes','textarea']]},
   invoices: {label: 'Invoices', one: 'invoice', flt: ['status','cust'], dt: 'issue_date', vk: 'amount', no: ['Invoice No','invoice_no','INV-'],
-    cols: [['invoice_no','Invoice',r => esc(inn(r))],['job_id','Job',r => esc(jno(r.job_id))],['customer_id','Customer',r => esc(cname(r.customer_id))],
+    cols: [['invoice_no','Invoice',r => esc(inn(r))],['job_id','Job',r => esc(invJobs(r))],['customer_id','Customer',r => esc(cname(r.customer_id))],
       ['issue_date','Issued'],['due_date','Due'],['amount','Invoice value',r => money(r.amount),1],
       ['paid','Received',r => money(r.paid),1],['s','Status',r => {const s = invStatus(r); return `<span class="pill ${s}">${s}</span>`}]],
     f: [['job_id','Job (job number)','job',1],['issue_date','Issue date','date'],['due_date','Due date','date'],
@@ -327,7 +335,7 @@ const M = {
       ['budget','Budget (LKR)','number'],['manager','Project manager','text'],['notes','Notes','textarea']]},
   maintenance: {label: 'Maintenance', one: 'maintenance task', flt: ['status','cust','priority','site'], dt: 'next_due', vk: 'value', no: ['Ref No','ref_no','M-'], get sts() { return [...S.statuses, 'Due soon', 'Overdue']; },
     cols: [['ref_no','Ref',r => pad('M-', r.ref_no)],['title','Task'],['customer_id','Customer',r => esc(cname(r.customer_id))],['site','Site / asset',r => (r.site ? '<b>' + esc(r.site) + '</b>' : '') + (r.asset ? (r.site ? ' / ' : '') + esc(r.asset) : '')],
-      ['frequency','Frequency'],['priority','Priority'],['next_due','Next due'],['completed','Completed date',r => r.completed ? shortDate(r.completed) : '<span style="opacity:.5">—</span>'],['mjobs','Jobs',r => mjobs(r),1],['ms','Status',r => gst(mstat(r))],
+      ['frequency','Frequency'],['priority','Priority'],['next_due','Next due'],['completed','Completed date',r => r.completed ? shortDate(r.completed) : '<span style="opacity:.5">—</span>'],['mjobs','Jobs',r => mjobs(r),1],['ms','Status',r => gst(mstat(r))],['minv','Invoice',r => minvPill(r)],
       ['value','Value',r => money(r.value),1],['est_cost','Total cost',r => money(r.est_cost),1],['mprofit','Profit',r => profit(+r.value || 0, +r.est_cost || 0),1]],
     f: [['customer_id','Customer','cust'],['title','Task / service','text',1],['site','Site / location','text'],['asset','Asset / equipment','text'],
       ['frequency','Frequency','select:Monthly,Weekly,Quarterly,Half-yearly,Yearly,One-time'],['assigned_to','Assigned to','text'],['status','Status','status'],['priority','Priority','select:Low,Normal,High,Urgent'],
@@ -396,8 +404,9 @@ async function loadMaint() {
   S.maint = r.data || [];
 }
 async function loadInvs() {
-  const {data} = await sb.from('invoices').select('customer_id,job_id,amount,paid').is('deleted_at', null);
-  S.invs = data || [];
+  let r = await sb.from('invoices').select('id,invoice_no,doc_no,customer_id,job_id,maintenance_id,notes,amount,paid').is('deleted_at', null);
+  if (r.error) r = await sb.from('invoices').select('customer_id,job_id,amount,paid').is('deleted_at', null);
+  S.invs = r.data || [];
 }
 async function loadProjects() {
   const {data} = await sb.from('projects').select('id,project_no,name').is('deleted_at', null).order('project_no');
