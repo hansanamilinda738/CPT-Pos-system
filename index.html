@@ -1068,6 +1068,10 @@ async function jobInvoiceItems(jid) {
     const {data: ml} = await sb.from('line_items').select('*').eq('parent_type', 'maintenance').eq('parent_id', jj.maintenance_id).order('sort');
     rows.unshift(...(ml || []).filter(x => x.kind !== 'Expense').map(x => ({kind: x.kind, description: x.description, quantity: x.quantity, unit: x.unit, unit_cost: x.unit_cost, unit_price: x.unit_price})));
   }
+  if (jj && (jj.maintenance_id || jj.job_type === 'Maintenance') && rows.length && !rows.some(x => x.kind === 'Location')) {   // maintenance invoice: group the lines under their location heading
+    const mt = S.maint.find(x => x.id === jj.maintenance_id), sn = ((mt && mt.site) || jj.site || '').trim();
+    if (sn) rows.unshift({kind: 'Location', description: sn, quantity: 1, unit: 'loc', unit_cost: 0, unit_price: 0});
+  }
   if (!rows.length) { const j = S.jobs.find(x => x.id === jid); if (j && +j.value > 0) rows.push({kind: 'Other', description: j.title, quantity: 1, unit: 'job', unit_cost: 0, unit_price: +j.value}); }
   return rows;
 }
@@ -1136,6 +1140,7 @@ async function printDoc(type, id) {
     if (!hasItems) return null;
     const ord = {Labour: 0, Material: 1, Other: 2, Transport: 3}, locs = [];
     if (hasLoc) { let cur = null; lines.forEach(x => { if (x.kind === 'Location') { cur = {name: x.description, rows: []}; locs.push(cur); } else { if (!cur) { cur = {name: '', rows: []}; locs.push(cur); } cur.rows.push(x); } }); }
+    else if (!per && inv && j && (j.maintenance_id || j.job_type === 'Maintenance') && (((S.maint.find(x => x.id === j.maintenance_id) || {}).site || j.site || '').trim())) locs.push({name: ((S.maint.find(x => x.id === j.maintenance_id) || {}).site || j.site).trim(), rows: lines.slice()});
     else if (per) { const mp = new Map(); lines.forEach(x => { const t = mtasks.find(t => (x.description || '').startsWith(t.title)), n = (t && (t.site || '').trim()) || ''; if (!mp.has(n)) mp.set(n, {name: n, rows: []}); mp.get(n).rows.push(x); }); if (![...mp.keys()].some(Boolean)) return null; locs.push(...mp.values()); }
     else return null;
     locs.forEach(L => L.rows.sort((a, b) => (ord[a.kind] ?? 2) - (ord[b.kind] ?? 2)));
