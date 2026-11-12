@@ -126,7 +126,7 @@ aside button:hover svg{animation:wig .5s}
 .bch{background:rgba(255,255,255,.14);border-radius:14px;padding:12px 16px;min-width:130px}.bch b{display:block;font-size:20px;font-weight:800}.bch span{font-size:12px;color:#d5e1fb}
 .tbar{height:7px;border-radius:7px;background:rgba(255,255,255,.25);margin-top:8px;overflow:hidden}.tbar i{display:block;height:100%;background:#fff;border-radius:7px;transition:width 1.2s cubic-bezier(.2,.8,.2,1)}
 .pgw{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600}.pgb{width:90px;height:8px;border-radius:8px;background:var(--bd);overflow:hidden}.pgb i{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,var(--bl),var(--bl2));animation:grow 1.1s cubic-bezier(.2,.8,.2,1)}
-.li table input,.li table select{padding:6px 8px;min-width:64px}.li .ld{min-width:190px}.li .lq,.li .lc,.li .lp{min-width:84px}.li td{padding:6px 8px}
+.li table input,.li table select{padding:6px 8px;min-width:64px}.li .ld{min-width:190px}.li textarea.ld{resize:none;overflow:hidden;line-height:1.35;min-height:36px;white-space:pre-wrap;word-break:break-word}.li td:nth-child(2){position:relative;min-width:220px}.sugg{position:absolute;left:8px;right:8px;top:calc(100% - 4px);z-index:30;background:var(--in,#fff);border:1px solid var(--bd);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:220px;overflow:auto}.sugg div{padding:7px 10px;cursor:pointer;border-bottom:1px solid rgba(128,128,128,.2)}.sugg div:hover{background:rgba(14,165,233,.15)}.li .lq,.li .lc,.li .lp{min-width:84px}.li td{padding:6px 8px}
 .liact{display:flex;gap:12px;align-items:center;margin-top:8px;flex-wrap:wrap}
 .lisum{display:flex;gap:18px;flex-wrap:wrap;font-weight:700;margin-top:8px}
 .opt{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--bd);border-radius:12px;cursor:pointer;margin:0;color:var(--tx);font-size:14px}
@@ -1026,7 +1026,7 @@ function itemsEditor(rows, onChange, kinds) {
   const pickList = isTask => isTask ? [...new Set((S.maint || []).map(t => ((t.title || '').trim() + (t.asset ? ' (' + t.asset + ')' : '')).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)) : (S.sites || []).map(x => x.name).filter(Boolean);
   const pickH = (isTask, cur) => { const l = pickList(isTask); if (cur && !l.includes(cur)) l.unshift(cur);
     return `<select class="ld lpick" data-task="${isTask ? 1 : 0}"><option value="">${isTask ? '— Select a task —' : '— Select a location —'}</option>${l.map(x => `<option value="${esc(x)}"${x === cur ? ' selected' : ''}>${esc(x)}</option>`).join('')}<option value="__new__">＋ Type a different name…</option></select>`; };
-  const descH = r => (r.kind || '') === 'Location' ? pickH(r.unit === 'task', r.description || '') : `<input class="ld" list="itemlist" value="${esc(r.description || '')}" placeholder="Item or service">`;
+  const descH = r => (r.kind || '') === 'Location' ? pickH(r.unit === 'task', r.description || '') : `<textarea class="ld" rows="1" placeholder="Item or service">${esc(r.description || '')}</textarea>`;
   const rowH = r => `<tr data-line-id="${esc(r.id || '')}"><td><select class="lk">${kinds.map(k => `<option${(r.kind || 'Material') === k ? ' selected' : ''}>${k}</option>`).join('')}</select></td><td>${descH(r)}</td><td><input class="lq" type="number" step="0.01" min="0" value="${r.quantity ?? 1}"></td><td><input class="lu" value="${esc(r.unit || 'pcs')}"></td><td><input class="lc" type="number" step="0.01" min="0" value="${r.unit_cost ?? 0}"></td><td><input class="lp" type="number" step="0.01" min="0" value="${r.unit_price ?? 0}"></td><td class="lt a"></td><td class="lpf a"></td><td><button type="button" class="btn g s lx" title="Remove line" aria-label="Remove line">${ic('x', 14)}</button></td></tr>`;
   const q = (tr, c) => tr.querySelector(c);
   // Preserve database IDs so quotation materials stay linked to their supply records.
@@ -1041,17 +1041,29 @@ function itemsEditor(rows, onChange, kinds) {
     onChange(totals()); };
   const add = r => tb.insertAdjacentHTML('beforeend', rowH(r || {}));
   rows.forEach(add);
+  const grow = el => { if (el.tagName !== 'TEXTAREA') return; if (!el.offsetParent) return; el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; };
+  const hideSugg = () => w.querySelectorAll('.sugg').forEach(x => x.remove());
+  const showSugg = el => {   // catalog suggestions listed just below the box while typing
+    hideSugg(); const tr = el.closest('tr'), v = el.value.trim().toLowerCase();
+    if (!v || el.tagName !== 'TEXTAREA' || q(tr, '.lk').value === 'Location') return;
+    const m = S.items.filter(x => (x.name || '').toLowerCase().includes(v) && (x.name || '').toLowerCase() !== v).slice(0, 8); if (!m.length) return;
+    const bx = document.createElement('div'); bx.className = 'sugg';
+    bx.innerHTML = m.map(x => `<div data-n="${esc(x.name)}">${esc(x.name)}</div>`).join('');
+    bx.addEventListener('mousedown', ev => { const o = ev.target.closest('[data-n]'); if (!o) return; ev.preventDefault(); el.value = o.dataset.n; hideSugg(); el.dispatchEvent(new Event('input', {bubbles: true})); });
+    el.closest('td').appendChild(bx); };
+  tb.addEventListener('focusout', e => { if (e.target.classList.contains('ld')) setTimeout(hideSugg, 120); });
   tb.addEventListener('input', e => {
+    if (e.target.classList.contains('ld')) { grow(e.target); showSugg(e.target); }
     if (e.target.classList.contains('ld')) { const it = S.items.find(x => x.name.toLowerCase() === e.target.value.trim().toLowerCase());
       if (it && !['Expense', 'Location'].includes(q(e.target.closest('tr'), '.lk').value)) { const tr = e.target.closest('tr'); q(tr, '.lk').value = KINDS.includes(it.kind) ? it.kind : 'Material'; q(tr, '.lu').value = it.unit || 'pcs'; q(tr, '.lc').value = it.unit_cost; q(tr, '.lp').value = it.unit_price; } }
     upd(); });
   tb.addEventListener('change', e => {
     const t = e.target, tr = t.closest('tr'); if (!tr) return;
-    if (t.classList.contains('lpick') && t.value === '__new__') { const inp = document.createElement('input'); inp.className = 'ld'; inp.placeholder = t.dataset.task === '1' ? 'Task name' : 'Location name'; t.replaceWith(inp); inp.focus(); }
+    if (t.classList.contains('lpick') && t.value === '__new__') { const inp = document.createElement('textarea'); inp.rows = 1; inp.className = 'ld'; inp.placeholder = t.dataset.task === '1' ? 'Task name' : 'Location name'; t.replaceWith(inp); inp.focus(); }
     if (t.classList.contains('lk')) {   // switching the Type to / from Location swaps the description between dropdown and text box
       const cell = q(tr, '.ld').closest('td'), cur = q(tr, '.ld').value.trim(), lu = q(tr, '.lu');
       if (t.value === 'Location') { if (lu.value !== 'task' && lu.value !== 'loc') lu.value = 'loc'; cell.innerHTML = pickH(lu.value === 'task', cur); }
-      else if (!cell.querySelector('input.ld')) cell.innerHTML = `<input class="ld" list="itemlist" value="${esc(cur)}" placeholder="Item or service">`;
+      else if (!cell.querySelector('textarea.ld')) cell.innerHTML = `<textarea class="ld" rows="1" placeholder="Item or service">${esc(cur)}</textarea>`;
     }
   });
   tb.addEventListener('change', upd);
@@ -1072,7 +1084,10 @@ function itemsEditor(rows, onChange, kinds) {
       add({kind: 'Labour', description: it ? it.name : d.description, quantity: 1, unit: (it && it.unit) || d.unit, unit_cost: it ? it.unit_cost : d.unit_cost, unit_price: it ? it.unit_price : d.unit_price}); });
     upd(); };
   w.querySelector('[data-add]').onclick = () => { add(); tb.lastElementChild.querySelector('.ld').focus(); upd(); };
-  return {el: w, read, totals, update: upd, isEmpty: () => !read().length, setRows: rs => { tb.innerHTML = ''; rs.forEach(add); upd(); }};
+  const growAll = () => tb.querySelectorAll('textarea.ld').forEach(grow);
+  setTimeout(growAll, 60); new MutationObserver(() => setTimeout(growAll, 0)).observe(tb, {childList: true, subtree: true});
+  w.addEventListener('transitionend', growAll); window.addEventListener('resize', growAll);
+  return {el: w, read, totals, update: upd, growAll, isEmpty: () => !read().length, setRows: rs => { tb.innerHTML = ''; rs.forEach(add); upd(); }};
 }
 async function jobInvoiceItems(jid) {
   const [li, su] = await Promise.all([sb.from('line_items').select('*').eq('parent_type', 'job').eq('parent_id', jid).order('sort'),
@@ -1207,13 +1222,13 @@ async function printDoc(type, id) {
         if (T.name) rows += `<tr class="tk"><td colspan="4">${esc(T.name)}${inv ? `<span style="float:right;font-weight:400;font-style:italic;color:#5b6b7d">Completed : ${esc(shortDate(doneOfTask(T.name) || cdate))}</span>` : ''}</td></tr>`;
         let prev = '', i = 0;
         T.rows.forEach(x => { const cat = catL[x.kind] || 'Charges'; if (cat !== prev) { rows += `<tr class="sb"><td colspan="4">${cat}</td></tr>`; prev = cat; i = 0; }
-          rows += `<tr class="${i++ % 2 ? 'w' : 'g'}"><td>${esc(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; });
+          rows += `<tr class="${i++ % 2 ? 'w' : 'g'}"><td>${br(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; });
       });
     });
   }
   if (!gm) groups.forEach((g, gi) => {
     if (hasItems) { rows += `<tr class="gb">${per ? '<td class="side"></td><td class="side"></td><td class="side"></td>' : first ? side : ''}<td colspan="3"><span class="nb">${String(gi + 1).padStart(2, '0')}</span>${gl[g.k]}</td><td class="r">${f2(g.rows.reduce((a, x) => a + x.quantity * x.unit_price, 0))}</td></tr>`; first = false; }
-    g.rows.forEach((x, i) => { rows += `<tr class="${i % 2 ? 'w' : 'g'}">${per ? `<td class="side"></td><td class="side" style="vertical-align:middle">${br(siteOf(x))}</td><td class="side" style="vertical-align:middle">${esc(shortDate((inv && dateOfLine(x)) || jdate))}</td>` : first ? side : ''}<td>${esc(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; first = false; });
+    g.rows.forEach((x, i) => { rows += `<tr class="${i % 2 ? 'w' : 'g'}">${per ? `<td class="side"></td><td class="side" style="vertical-align:middle">${br(siteOf(x))}</td><td class="side" style="vertical-align:middle">${esc(shortDate((inv && dateOfLine(x)) || jdate))}</td>` : first ? side : ''}<td>${br(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; first = false; });
   });
   const tr = (label, val) => `<tr class="sm"><td colspan="${gm ? 3 : 6}" class="r">${label}</td><td class="r">${val}</td></tr>`;
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(no)}</title><style>
