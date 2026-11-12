@@ -298,13 +298,13 @@ const M = {
   customers: {label: 'Customers', one: 'customer', flt: [],
     cols: [['name','Name',r => esc(r.name)],['phone','Phone'],['email','Email'],['cjobs','Jobs',r => cjobs(r),1],['cout','Outstanding',r => money(cout(r)),1],['address','Address']],
     f: [['name','Name','text',1],['contact_person','Contact person','text'],['phone','Phone','tel'],['email','Email','email'],['address','Address','textarea'],['notes','Notes','textarea']]},
-  quotations: {label: 'Quotations', one: 'quotation', flt: ['status','cust'], dt: 'quote_date', vk: 'amount', no: ['Quote No','quote_no','Q-'],
+  quotations: {label: 'Quotations', one: 'quotation', flt: ['status','cust','site'], dt: 'quote_date', vk: 'amount', no: ['Quote No','quote_no','Q-'],
     cols: [['quote_no','Quote',r => esc(qn(r))],['title','Title'],['customer_id','Customer',r => esc(cname(r.customer_id))],
       ['status','Status',r => qpill(r.status)],['job_id','Job',r => esc(jno(r.job_id))],['amount','Quote value',r => money(r.amount),1],['est','Est. profit',r => profit(r.amount, jcost(r)),1]],
     f: [['customer_id','Customer','cust'],['site','Site / location','text'],['title','Service / title','text',1],['description','Project details','textarea'],['quote_date','Quote date','date'],['valid_until','Valid until','date'],
       ['status','Status','select:Draft,Sent,Rejected'],...costF,['amount','Quotation total (LKR)','number'],['notes','Notes','textarea']]},
-  jobs: {label: 'Jobs', one: 'job', flt: ['status','priority','cust','proj'], dt: 'received_date', vk: 'value', no: ['Job No','job_no','J-'],
-    cols: [['job_no','Job',r => pad('J-', r.job_no)],['title','Title'],['customer_id','Customer',r => esc(cname(r.customer_id))],
+  jobs: {label: 'Jobs', one: 'job', flt: ['status','priority','cust','proj','site'], dt: 'received_date', vk: 'value', no: ['Job No','job_no','J-'],
+    cols: [['job_no','Job',r => pad('J-', r.job_no)],['site','Site / location',r => r.site ? `<b>${esc(r.site)}</b>` : '<span style="opacity:.5">No location</span>'],['title','Title'],['customer_id','Customer',r => esc(cname(r.customer_id))],
       ['project_id','Project',r => esc(pname(r.project_id))],['job_type','Type'],['status','Status',r => pill(r.status)],['progress','Progress',r => `<div class="pgw"><div class="pgb"><i style="width:${+r.progress || 0}%"></i></div>${+r.progress || 0}%</div>`],['target_date','Target'],['value','Value',r => money(r.value),1],
       ['cost','Cost',r => money(jcost(r)),1],['profit','Profit',r => profit(r.value, jcost(r)),1]],
     f: [['customer_id','Customer','cust'],['site','Site / location','text'],['technician','Assigned technician(s)','text'],['project_id','Project','proj'],['title','Job title','text',1],['job_type','Job type','select:Direct,Quotation,Maintenance'],['maintenance_id','Maintenance task','maint'],['description','Description','textarea'],
@@ -325,9 +325,9 @@ const M = {
       ['received_date','Received date','date'],['target_date','Target date','date'],['completion_date','Completion date','date'],['value','Project value (LKR)','number'],
       ['labour_cost','Labour charge (LKR)','number'],['material_cost','Material cost (LKR)','number'],['transport_cost','Transport cost (LKR)','number'],['other_cost','Other expenses (LKR)','number'],
       ['budget','Budget (LKR)','number'],['manager','Project manager','text'],['notes','Notes','textarea']]},
-  maintenance: {label: 'Maintenance', one: 'maintenance task', flt: ['status','cust','priority'], dt: 'next_due', vk: 'value', no: ['Ref No','ref_no','M-'], get sts() { return [...S.statuses, 'Due soon', 'Overdue']; },
-    cols: [['ref_no','Ref',r => pad('M-', r.ref_no)],['title','Task'],['customer_id','Customer',r => esc(cname(r.customer_id))],['site','Site / asset',r => esc([r.site, r.asset].filter(Boolean).join(' / '))],
-      ['frequency','Frequency'],['priority','Priority'],['next_due','Next due'],['last_done','Last done'],['mjobs','Jobs',r => mjobs(r),1],['ms','Status',r => gst(mstat(r))],
+  maintenance: {label: 'Maintenance', one: 'maintenance task', flt: ['status','cust','priority','site'], dt: 'next_due', vk: 'value', no: ['Ref No','ref_no','M-'], get sts() { return [...S.statuses, 'Due soon', 'Overdue']; },
+    cols: [['ref_no','Ref',r => pad('M-', r.ref_no)],['title','Task'],['customer_id','Customer',r => esc(cname(r.customer_id))],['site','Site / asset',r => (r.site ? '<b>' + esc(r.site) + '</b>' : '') + (r.asset ? (r.site ? ' / ' : '') + esc(r.asset) : '')],
+      ['frequency','Frequency'],['priority','Priority'],['next_due','Next due'],['completed','Completed date',r => r.completed ? shortDate(r.completed) : '<span style="opacity:.5">—</span>'],['mjobs','Jobs',r => mjobs(r),1],['ms','Status',r => gst(mstat(r))],
       ['value','Value',r => money(r.value),1],['est_cost','Total cost',r => money(r.est_cost),1],['mprofit','Profit',r => profit(+r.value || 0, +r.est_cost || 0),1]],
     f: [['customer_id','Customer','cust'],['title','Task / service','text',1],['site','Site / location','text'],['asset','Asset / equipment','text'],
       ['frequency','Frequency','select:Monthly,Weekly,Quarterly,Half-yearly,Yearly,One-time'],['assigned_to','Assigned to','text'],['status','Status','status'],['priority','Priority','select:Low,Normal,High,Urgent'],
@@ -402,7 +402,46 @@ async function loadProjects() {
   const {data} = await sb.from('projects').select('id,project_no,name').is('deleted_at', null).order('project_no');
   S.projects = data || [];
 }
-const reload = async () => { await loadCust(); await loadJobs(); await loadProjects(); await loadMaint(); await loadInvs(); await loadItems(); };
+/* ---------- site locations: one saved list used by Quotation, Job, Maintenance and AI Quotation ---------- */
+async function loadSites() {
+  const man = await sb.from('site_locations').select('id,name').order('name');
+  S.sitesTable = !man.error;
+  const seen = new Map();
+  (man.data || []).forEach(x => seen.set(x.name.trim().toLowerCase(), {id: x.id, name: x.name.trim()}));
+  const qs = await sb.from('quotations').select('site').is('deleted_at', null);
+  [...(qs.data || []), ...(S.jobs || []), ...(S.maint || [])].forEach(x => { const n = (x.site || '').trim(); if (n && !seen.has(n.toLowerCase())) seen.set(n.toLowerCase(), {name: n}); });
+  S.sites = [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+  let dl = document.getElementById('sitelist'); if (!dl) { dl = document.createElement('datalist'); dl.id = 'sitelist'; document.body.appendChild(dl); }
+  dl.innerHTML = S.sites.map(x => `<option value="${esc(x.name)}"></option>`).join('');
+}
+async function saveSite(name, quiet) {
+  const n = (name || '').trim(); if (!n) return false;
+  if ((S.sites || []).some(x => x.id && x.name.toLowerCase() === n.toLowerCase())) return true;
+  if (S.sitesTable === false) { if (!quiet) toast('Run SQL 024_site_locations.sql in Supabase to keep a saved location list'); return false; }
+  const {error} = await sb.from('site_locations').insert({name: n});
+  if (error && !quiet && !/duplicate|unique/i.test(error.message)) toast('Location not saved: ' + error.message);
+  await loadSites(); return !error;
+}
+function siteField(inp) {
+  const fld = inp.closest('.fld'); if (!fld) return;
+  inp.setAttribute('list', 'sitelist'); inp.placeholder = 'Pick from the list below or type a new location';
+  const sel = document.createElement('select'); sel.style.marginTop = '6px';
+  const fill = () => { sel.innerHTML = '<option value="">Pick a saved location…</option>' + (S.sites || []).map(x => `<option>${esc(x.name)}</option>`).join(''); };
+  sel.onchange = () => { if (sel.value) { inp.value = sel.value; sel.value = ''; } };
+  const bar = document.createElement('div'); bar.style.cssText = 'display:flex;gap:6px;margin-top:6px;flex-wrap:wrap';
+  const mk = t => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn g s'; b.textContent = t; return b; };
+  const bAdd = mk('Save to location list'), bMan = mk('Manage list');
+  const mg = document.createElement('div'); mg.style.cssText = 'display:none;margin-top:6px;font-size:13px;max-height:160px;overflow:auto';
+  const rm = () => { mg.innerHTML = (S.sites || []).length ? S.sites.map((x, i) => `<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid rgba(128,128,128,.25)"><span>${esc(x.name)}${x.id ? '' : ' <small>(from existing records)</small>'}</span>${x.id ? `<a href="#" data-d="${i}">remove</a>` : `<a href="#" data-a="${i}">save</a>`}</div>`).join('') : '<em>No locations yet</em>'; };
+  bAdd.onclick = async () => { if (!inp.value.trim()) return toast('Type a location first'); if (await saveSite(inp.value)) { toast('Added to the location list'); fill(); rm(); } };
+  bMan.onclick = () => { mg.style.display = mg.style.display === 'none' ? 'block' : 'none'; rm(); };
+  mg.onclick = async e => { const a = e.target.closest('a'); if (!a) return; e.preventDefault();
+    if (a.dataset.d !== undefined) { const x = S.sites[+a.dataset.d]; const {error} = await sb.from('site_locations').delete().eq('id', x.id); if (error) return toast('Remove failed: ' + error.message); await loadSites(); }
+    else await saveSite(S.sites[+a.dataset.a].name);
+    fill(); rm(); };
+  fill(); bar.append(bAdd, bMan); fld.append(sel, bar, mg);
+}
+const reload = async () => { await loadCust(); await loadJobs(); await loadProjects(); await loadMaint(); await loadInvs(); await loadItems(); await loadSites(); };
 
 /* ---------- navigation ---------- */
 function nav() {
@@ -483,7 +522,7 @@ function renderAiDraft() {
   const d=AI_DRAFT.draft;
   $('#ai-result').innerHTML=`<div class="card" style="padding:18px;display:grid;gap:12px"><div><h2>Review AI quotation draft</h2><p class="mu">This is not saved yet. Verify quantities, specifications, unit costs and selling prices.</p></div>
   <div class="fld"><label>Quotation title</label><input id="ai-title" value="${esc(d.title||'Engineering works')}"></div>
-  <div class="fld"><label>Site / location</label><input id="ai-site" value="${esc(d.site||'')}"></div>
+  <div class="fld"><label>Site / location</label><input id="ai-site" list="sitelist" placeholder="Pick from the saved list or type" value="${esc(d.site||'')}"></div>
   <div class="fld"><label>Description</label><textarea id="ai-desc-edit" rows="2">${esc(d.description||$('#ai-description')?.value||'')}</textarea></div>
   <div class="ct tw li"><table><thead><tr><th>Type</th><th>Description</th><th>Qty</th><th>Unit</th><th>Cost/unit</th><th>Sell/unit</th><th></th></tr></thead><tbody id="ai-lines"></tbody></table></div>
   <div class="row" style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn g s" id="ai-add-line">+ Add line</button><span class="mu" id="ai-totals"></span></div>
@@ -546,7 +585,7 @@ async function dash() {
   const top = Object.entries(tc).sort((a, b) => b[1].a - a[1].a).slice(0, 5);
   const topH = top.length ? '<table><thead><tr><th>Customer</th><th class="a">Invoiced</th><th class="a">Outstanding</th></tr></thead><tbody>' + top.map(([c, v]) => `<tr><td>${esc(cname(c) || 'No customer')}</td><td class="a">${money(v.a)}</td><td class="a">${money(v.a - v.p)}</td></tr>`).join('') + '</tbody></table>' : '<div class="empty">No invoices in this period.</div>';
   const recent = jobs.slice().sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 5);
-  const rec = recent.length ? '<table><tbody>' + recent.map(r => `<tr><td>${pad('J-', r.job_no)}</td><td>${esc(r.title)}</td><td>${esc(cname(r.customer_id))}</td><td>${pill(r.status)}</td><td class="a">${profit(r.value, jcost(r))}</td></tr>`).join('') + '</tbody></table>' : '<div class="empty">No jobs in this period.</div>';
+  const rec = recent.length ? '<table><tbody>' + recent.map(r => `<tr><td>${pad('J-', r.job_no)}</td><td>${r.site ? '<b>' + esc(r.site) + '</b><br>' : ''}${esc(r.title)}</td><td>${esc(cname(r.customer_id))}</td><td>${pill(r.status)}</td><td class="a">${profit(r.value, jcost(r))}</td></tr>`).join('') + '</tbody></table>' : '<div class="empty">No jobs in this period.</div>';
   const cfx = x => !cu || x.customer_id === cu;
   const aI = (i.data || []).filter(x => cfx(x) && +x.paid < +x.amount && x.due_date && x.due_date < today());
   const aJ = (j.data || []).filter(x => cfx(x) && !done.includes(x.status) && x.target_date && x.target_date < today());
@@ -597,17 +636,18 @@ async function list() {
   filterUI();
   const {data, error} = await sb.from(S.view).select('*').is('deleted_at', null).order('created_at', {ascending: false});
   if (error) { $('#tb').innerHTML = `<p class="empty">Could not load data: ${esc(error.message)}</p>`; return; }
-  S.rows = data; draw();
+  S.rows = data; if (S.view === 'maintenance') data.forEach(r => { r.completed = mdone(r); }); draw();
 }
 function filterUI() {
   const m = M[S.view], f = S.f;
   const sel = (id, l, o) => `<div><label>${l}</label><select id="${id}"><option value="">All</option>${o.map(x => `<option value="${esc(x[0])}"${f[id] === x[0] ? ' selected' : ''}>${esc(x[1])}</option>`).join('')}</select></div>`;
   let h = `<div class="sb">${ic('search', 16)}<input id="q" placeholder="Search ${m.label.toLowerCase()}" aria-label="Search" value="${esc(S.q)}"></div>`;
   if (m.flt.includes('status')) h += sel('status', 'Status', (m.sts || (S.view === 'jobs' ? S.statuses : S.view === 'quotations' ? QST : ['Unpaid','Partial','Paid','Overdue'])).map(x => [x, x]));
-  if (m.flt.includes('job')) h += sel('job', 'Job', S.jobs.map(j => [j.id, pad('J-', j.job_no) + ' - ' + j.title]));
+  if (m.flt.includes('job')) h += sel('job', 'Job', S.jobs.map(j => [j.id, pad('J-', j.job_no) + ' - ' + (j.site ? j.site + ' | ' : '') + j.title]));
   if (m.flt.includes('proj')) h += sel('proj', 'Project', S.projects.map(x => [x.id, x.name]));
   if (m.flt.includes('priority')) h += sel('priority', 'Priority', ['Low','Normal','High','Urgent'].map(x => [x, x]));
   if (m.flt.includes('cust')) h += sel('cust', 'Customer', S.cust.map(c => [c.id, c.name]));
+  if (m.flt.includes('site')) h += sel('site', 'Location', (S.sites || []).map(x => [x.name, x.name]));
   if (S.view === 'jobs') h += sel('pf', 'Profit', [['p','Profitable'],['l','Loss-making']]);
   if (m.dt) h += `<div class="dr"><label>From</label><input type="date" id="from" value="${f.from || ''}"></div><div class="dr"><label>To</label><input type="date" id="to" value="${f.to || ''}"></div>`;
   if (m.vk) h += `<div class="dr"><label>Min value</label><input type="number" id="min" min="0" placeholder="0" value="${f.min ?? ''}"></div><div class="dr"><label>Max value</label><input type="number" id="max" min="0" placeholder="Any" value="${f.max ?? ''}"></div>`;
@@ -615,7 +655,7 @@ function filterUI() {
   h += `<div class="cmw"><button class="btn g" id="cl">${ic('cols', 16)} Columns</button><div class="card cm hide" id="cm">${m.cols.map(c => `<label><input type="checkbox" data-col="${c[0]}"${hid.includes(c[0]) ? '' : ' checked'}>${c[1]}</label>`).join('')}</div></div><button class="btn g" id="clr">${ic('x', 16)} Clear</button>`;
   $('#fl').innerHTML = h;
   $('#q').oninput = e => { S.q = e.target.value.toLowerCase(); S.page = 1; draw(); };
-  ['status','priority','cust','from','to','min','max','pf','job','proj'].forEach(id => { const e = $('#' + id); if (e) e.oninput = () => { S.f[id] = e.value; S.page = 1; draw(); }; });
+  ['status','priority','cust','site','from','to','min','max','pf','job','proj'].forEach(id => { const e = $('#' + id); if (e) e.oninput = () => { S.f[id] = e.value; S.page = 1; draw(); }; });
   $('#cl').onclick = () => $('#cm').classList.toggle('hide');
   document.querySelectorAll('[data-col]').forEach(c => c.onchange = () => {
     const k = c.dataset.col, a = new Set(S.hid[S.view] || []); c.checked ? a.delete(k) : a.add(k); S.hid[S.view] = [...a];
@@ -624,10 +664,11 @@ function filterUI() {
 }
 function filt(r) {
   const f = S.f, m = M[S.view];
-  if (S.q && !(Object.values(r).join(' ') + ' ' + cname(r.customer_id)).toLowerCase().includes(S.q)) return false;
+  if (S.q) { const hay = (Object.values(r).join(' ') + ' ' + cname(r.customer_id)).toLowerCase(); if (S.q.split(/\s+/).filter(Boolean).some(t => !hay.includes(t))) return false; }
   if (f.status && (S.view === 'invoices' ? invStatus(r) : S.view === 'maintenance' ? mstat(r) : r.status) !== f.status) return false;
   if (f.priority && r.priority !== f.priority) return false;
   if (f.cust && r.customer_id !== f.cust) return false;
+  if (f.site && (r.site || '').trim().toLowerCase() !== f.site.trim().toLowerCase()) return false;
   if (f.late && !(r.target_date && r.target_date < today() && !S.statuses.slice(-3).includes(r.status))) return false;
   if (f.job && r.job_id !== f.job) return false;
   if (f.proj && r.project_id !== f.proj) return false;
@@ -815,7 +856,7 @@ async function jobCard(id) {
     j.maintenance_id ? sb.from('maintenance').select('ref_no,title,frequency,next_due,status').eq('id', j.maintenance_id).maybeSingle() : Promise.resolve({data: null})]);
   const sups = su.data || [], invs = iv.data || [], q = qu.data, m = mt.data, sum = (a, k) => a.reduce((t, x) => t + (+x[k] || 0), 0);
   const cost = +j.cost || jcost(j), billed = sum(invs, 'amount'), got = sum(invs, 'paid');
-  showCard(`<h2>${pad('J-', j.job_no)} &nbsp;${esc(j.title)} &nbsp;${pill(j.status)}</h2>`
+  showCard(`<h2>${pad('J-', j.job_no)} &nbsp;${j.site ? '<b>' + esc(j.site) + '</b> — ' : ''}${esc(j.title)} &nbsp;${pill(j.status)}</h2>`
     + kv([['Customer', esc(cname(j.customer_id)) || '-'], ['Project', esc(pname(j.project_id)) || '-'], ['Type', esc(j.job_type || 'Direct')], ['Received', esc(j.received_date || '-')], ['Target date', esc(j.target_date || '-')], ['Completed', esc(j.completion_date || '-')],
       ['Quotation', q ? esc(qn(q)) + ' (' + esc(q.status) + ')' : '-'], ['Maintenance task', m ? pad('M-', m.ref_no) + ' ' + esc(m.title) : '-']])
     + '<h3 class="full">Money</h3>'
@@ -831,18 +872,24 @@ async function custCard(id) {
   const jobs = S.jobs.filter(j => j.customer_id === id), qs = qu.data || [], invs = iv.data || [], sum = (a, k) => a.reduce((t, x) => t + (+x[k] || 0), 0), done = S.statuses.slice(-3);
   showCard(`<h2>${esc(c.name)}</h2><div class="mu full" style="font-size:13px">${esc([c.phone, c.email, c.address].filter(Boolean).join('  |  '))}</div>`
     + kv([['Jobs', jobs.length], ['Open jobs', jobs.filter(j => !done.includes(j.status)).length], ['Quotations', qs.length], ['Invoiced', money(sum(invs, 'amount'))], ['Received', money(sum(invs, 'paid'))], ['Outstanding', money(sum(invs, 'amount') - sum(invs, 'paid'))]])
-    + '<h3 class="full">Jobs</h3>' + tbl(['Job','Title','Status','Value'], jobs.map(j => [pad('J-', j.job_no), esc(j.title), pill(j.status), money(j.value)]))
+    + '<h3 class="full">Jobs</h3>' + tbl(['Job','Title','Status','Value'], jobs.map(j => [pad('J-', j.job_no), (j.site ? '<b>' + esc(j.site) + '</b><br>' : '') + esc(j.title), pill(j.status), money(j.value)]))
     + '<h3 class="full">Quotations</h3>' + tbl(['No','Title','Status','Value'], qs.map(x => [esc(qn(x)), esc(x.title), qpill(x.status), money(x.amount)]))
     + '<h3 class="full">Invoices</h3>' + tbl(['No','Job','Due','Amount','Received','Status'], invs.map(x => [esc(inn(x)), esc(jno(x.job_id)), esc(x.due_date || ''), money(x.amount), money(x.paid), `<span class="pill ${invStatus(x)}">${invStatus(x)}</span>`])));
 }
 /* ---------- line items editor, conversion, payments, printing ---------- */
 const KINDS = ['Material','Labour','Transport','Other','Expense'];   // 'Expense' = internal cost only: counted in cost and profit, never shown on quotation / invoice
+// Default rates (LKR). Change the numbers here to change the defaults everywhere.
+const RATES = {
+  engineer:   {description: 'Engineer charge',   kind: 'Labour',    unit: 'day', unit_cost: 0,  unit_price: 4500},
+  technician: {description: 'Technician charge', kind: 'Labour',    unit: 'day', unit_cost: 0,  unit_price: 3500},
+  transport:  {description: 'Transport',         kind: 'Transport', unit: 'km',  unit_cost: 20, unit_price: 60}
+};
 const krank = k => { const i = KINDS.indexOf(k); return i < 0 ? 3 : i; };
 function itemsEditor(rows, onChange, kinds) {
   kinds = kinds || KINDS;
   const w = document.createElement('div'); w.className = 'full';
   w.innerHTML = `<h3 style="margin-bottom:8px">Items, labour and costs</h3><div class="ct tw li"><table><thead><tr><th>Type</th><th>Description</th><th>Qty</th><th>Unit</th><th>Unit cost</th><th>Unit price</th><th class="a">Total</th><th class="a">Profit</th><th></th></tr></thead><tbody></tbody></table></div><div class="lsum" style="display:flex;gap:18px;flex-wrap:wrap;font-weight:600;margin:8px 0"></div>
-    <div class="liact"><button type="button" class="btn g s" data-add>${ic('plus', 14)} Add line</button><button type="button" class="btn g s" data-addexp title="Internal expense: counted in total cost and profit, NOT shown on the quotation or invoice">${ic('plus', 14)} Add expense</button><button type="button" class="btn g s" data-addlab title="Adds Engineer charge and Technician charge as Labour lines">${ic('plus', 14)} Engineer + Technician</button><span class="mu" style="font-size:12.5px">Choose an item from your catalog to fill the price automatically. The totals above are calculated from these lines.</span></div>
+    <div class="liact"><button type="button" class="btn g s" data-add>${ic('plus', 14)} Add line</button><button type="button" class="btn g s" data-addexp title="Internal expense: counted in total cost and profit, NOT shown on the quotation or invoice">${ic('plus', 14)} Add expense</button><button type="button" class="btn g s" data-addtr title="Adds a Transport line at the default rate">${ic('plus', 14)} Transport</button><button type="button" class="btn g s" data-addlab title="Adds Engineer charge and Technician charge as Labour lines">${ic('plus', 14)} Engineer + Technician</button><span class="mu" style="font-size:12.5px">Choose an item from your catalog to fill the price automatically. The totals above are calculated from these lines.</span></div>
     <datalist id="itemlist">${S.items.map(i => `<option value="${esc(i.name)}"></option>`).join('')}</datalist>`;
   const tb = w.querySelector('tbody');
   const rowH = r => `<tr data-line-id="${esc(r.id || '')}"><td><select class="lk">${kinds.map(k => `<option${(r.kind || 'Material') === k ? ' selected' : ''}>${k}</option>`).join('')}</select></td><td><input class="ld" list="itemlist" value="${esc(r.description || '')}" placeholder="Item or service"></td><td><input class="lq" type="number" step="0.01" min="0" value="${r.quantity ?? 1}"></td><td><input class="lu" value="${esc(r.unit || 'pcs')}"></td><td><input class="lc" type="number" step="0.01" min="0" value="${r.unit_cost ?? 0}"></td><td><input class="lp" type="number" step="0.01" min="0" value="${r.unit_price ?? 0}"></td><td class="lt a"></td><td class="lpf a"></td><td><button type="button" class="btn g s lx" title="Remove line" aria-label="Remove line">${ic('x', 14)}</button></td></tr>`;
@@ -866,11 +913,17 @@ function itemsEditor(rows, onChange, kinds) {
   tb.addEventListener('change', upd);
   tb.addEventListener('click', e => { const b = e.target.closest('.lx'); if (b) { b.closest('tr').remove(); upd(); } });
   w.querySelector('[data-addexp]').onclick = () => { add({kind: 'Expense', quantity: 1, unit: 'lot', unit_cost: 0, unit_price: 0}); tb.lastElementChild.querySelector('.ld').focus(); upd(); };
+  w.querySelector('[data-addtr]').onclick = () => { if (![...tb.rows].some(tr => q(tr, '.lk').value === 'Transport' && /^transport/i.test(q(tr, '.ld').value))) add({...RATES.transport, quantity: 1}); upd(); };
+  tb.addEventListener('change', e => {   // choosing the Transport type on an empty row fills the default transport rate
+    if (!e.target.classList.contains('lk') || e.target.value !== 'Transport') return;
+    const tr = e.target.closest('tr'); if (+q(tr, '.lc').value || +q(tr, '.lp').value) return;
+    if (!q(tr, '.ld').value.trim()) q(tr, '.ld').value = RATES.transport.description;
+    q(tr, '.lu').value = RATES.transport.unit; q(tr, '.lc').value = RATES.transport.unit_cost; q(tr, '.lp').value = RATES.transport.unit_price; upd(); });
   w.querySelector('[data-addlab]').onclick = () => {
-    [['Engineer charge', /engineer/i], ['Technician charge', /techn/i]].forEach(([label, re]) => {
+    [[/engineer/i, RATES.engineer], [/techn/i, RATES.technician]].forEach(([re, d]) => {
       if ([...tb.rows].some(tr => q(tr, '.lk').value === 'Labour' && re.test(q(tr, '.ld').value))) return;
-      const it = S.items.find(x => x.kind === 'Labour' && re.test(x.name || '')) || S.items.find(x => re.test(x.name || ''));
-      add({kind: 'Labour', description: it ? it.name : label, quantity: 1, unit: (it && it.unit) || 'day', unit_cost: it ? it.unit_cost : 0, unit_price: it ? it.unit_price : 0}); });
+      const it = S.items.find(x => x.kind === 'Labour' && re.test(x.name || '') && +x.unit_price > 0) || S.items.find(x => re.test(x.name || '') && +x.unit_price > 0);   // a priced catalog item wins, otherwise the default rate
+      add({kind: 'Labour', description: it ? it.name : d.description, quantity: 1, unit: (it && it.unit) || d.unit, unit_cost: it ? it.unit_cost : d.unit_cost, unit_price: it ? it.unit_price : d.unit_price}); });
     upd(); };
   w.querySelector('[data-add]').onclick = () => { add(); tb.lastElementChild.querySelector('.ld').focus(); upd(); };
   return {el: w, read, totals, update: upd, isEmpty: () => !read().length, setRows: rs => { tb.innerHTML = ''; rs.forEach(add); upd(); }};
@@ -931,6 +984,7 @@ async function payDialog(id) {
 }
 const longDate = d => { if (!d) return ''; const x = new Date(String(d).slice(0, 10) + 'T12:00:00'), n = x.getDate(), sf = n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'; return n + sf + ' Of ' + x.toLocaleString('en', {month: 'long'}) + ' ' + x.getFullYear(); };
 const f2 = n => Number(n || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const mdone = r => [r.completion_date, r.last_done, ...(S.jobs || []).filter(j => j.maintenance_id === r.id && j.completion_date && ['Completed','Invoiced','Paid'].includes(j.status)).map(j => j.completion_date)].filter(Boolean).map(x => String(x).slice(0, 10)).sort().pop() || '';
 const shortDate = d => { if (!d) return ''; const x = String(d).slice(0, 10).split('-'); return x.length === 3 ? x[2] + '/' + x[1] + '/' + x[0] : String(d); };
 async function printDoc(type, id) {
   const d = S.rows.find(x => x.id === id); if (!d) return;
@@ -1039,7 +1093,7 @@ function input(f, v) {
   let h;
   if (t === 'textarea') h = `<textarea name="${k}" rows="3">${esc(val)}</textarea>`;
   else if (t === 'cust') h = `<select name="${k}"><option value="">None</option>${S.cust.map(c => `<option value="${c.id}"${c.id === val ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}</select>`;
-  else if (t === 'job') h = `<select name="${k}" required><option value="">Select job number</option>${S.jobs.map(j => `<option value="${j.id}"${j.id === val ? ' selected' : ''}>${pad('J-', j.job_no)} - ${esc(j.title)}</option>`).join('')}</select>`;
+  else if (t === 'job') h = `<select name="${k}" required><option value="">Select job number</option>${S.jobs.map(j => `<option value="${j.id}"${j.id === val ? ' selected' : ''}>${pad('J-', j.job_no)} - ${j.site ? esc(j.site) + ' | ' : ''}${esc(j.title)}</option>`).join('')}</select>`;
   else if (t === 'maint') h = `<select name="${k}"><option value="">Not linked</option>${S.maint.map(x => `<option value="${x.id}"${x.id === val ? ' selected' : ''}>${pad('M-', x.ref_no)} - ${esc(x.title)}</option>`).join('')}</select>`;
   else if (t === 'proj') h = `<select name="${k}"><option value="">No project</option>${S.projects.map(x => `<option value="${x.id}"${x.id === val ? ' selected' : ''}>${pad('P-', x.project_no)} - ${esc(x.name)}</option>`).join('')}</select>`;
   else if (t === 'status' || t.startsWith('select:')) {
@@ -1119,6 +1173,7 @@ async function form(row, pre) {
     js.closest('.fld').appendChild(pb);
   }
   const cs = nm('customer_id'), si = nm('site');
+  if (si) siteField(si);
   if (cs && si) cs.addEventListener('change', () => { const c = S.cust.find(x => x.id === cs.value); if (c && c.address && !si.value) si.value = c.address; });
   $('#df').onsubmit = async e => {
     e.preventDefault();
@@ -1138,6 +1193,7 @@ async function form(row, pre) {
       const {error: e2} = await sb.rpc('save_line_items', {p_type: ptype, p_id: pid, p_items: rs});
       if (e2) return toast('Items not saved: ' + e2.message + (ptype === 'maintenance' ? ' (run SQL 021_maintenance_line_items.sql in Supabase)' : ' (run SQL 015_sync_engine.sql in Supabase)'));
     }
+    if (o.site) await saveSite(o.site, true);
     const qmsg = S.view === 'jobs' && o.job_type === 'Quotation' && !(row && row.quotation_id);
     $('#dlg').close(); toast(qmsg ? 'Job saved. A draft quotation was added to the Quotations tab.' : row ? 'Saved' : 'Created');
     if (S.view === 'invoices' && o.amount > 0 && o.paid >= o.amount) confetti();
