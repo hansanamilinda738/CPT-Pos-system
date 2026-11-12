@@ -149,6 +149,15 @@ aside{position:fixed;bottom:0;left:0;right:0;top:auto;height:auto;width:100%;fle
 aside button{flex-direction:column;gap:2px;font-size:11px;padding:6px 8px}.brand,.sp{display:none}
 main,.top{padding-left:14px;padding-right:14px}main{padding-bottom:90px}.grid2{grid-template-columns:1fr}#df{grid-template-columns:1fr}
 }
+tbody tr.ninv td{background:rgba(245,158,11,.13)}tbody tr.ninv td:first-child{box-shadow:inset 4px 0 0 #f59e0b}tbody tr.ninv:hover td{background:rgba(245,158,11,.22)}
+tbody tr.hot td{background:rgba(220,38,38,.12)}tbody tr.hot td:first-child{box-shadow:inset 4px 0 0 #dc2626}tbody tr.hot:hover td{background:rgba(220,38,38,.2)}
+.sum span.ninvchip{cursor:pointer;background:#fef3c7;color:#92400e;border-color:#f59e0b;animation:npulse 2s infinite}
+@keyframes npulse{50%{box-shadow:0 0 0 5px rgba(245,158,11,.28)}}
+.ob{display:flex;height:18px;border-radius:9px;overflow:hidden;background:var(--in);margin:12px 0 14px}.ob i{display:block;height:100%;width:0;transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
+.oc{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.oc button{text-align:left;cursor:pointer;background:var(--in);border:1px solid var(--bd);border-left:5px solid var(--c);border-radius:12px;padding:12px 14px;transition:transform .2s,box-shadow .2s;animation:up .5s both}
+.oc button:hover{transform:translateY(-3px);box-shadow:var(--sh)}.oc b{display:block;font-size:19px}.oc small{color:var(--mu)}
+.oc .tr2{height:6px;border-radius:6px;background:var(--bd);margin-top:8px;overflow:hidden}.oc .tr2 i{display:block;height:100%;width:0;background:var(--c);transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
 </style>
 </head>
 <body>
@@ -296,6 +305,28 @@ const minvPill = t => { const l = minvs(t); return l.length ? `<span class="pill
 const invJobs = r => { if (r.job_id) return jno(r.job_id);
   const ts = S.maint.filter(t => r.maintenance_id === t.id || mref(t, r.notes)), js = [...new Set(S.jobs.filter(j => ts.some(t => t.id === j.maintenance_id)).sort((a, b) => a.job_no - b.job_no).map(j => pad('J-', j.job_no)))];
   return js.length ? js.join(', ') : ts.map(t => pad('M-', t.ref_no)).join(', '); };
+/* invoice coverage: which jobs / maintenance tasks / projects still have NO invoice */
+const taskOf = j => j.maintenance_id ? S.maint.find(t => t.id === j.maintenance_id) : null;
+const jobInvs = j => (S.invs || []).filter(i => i.job_id === j.id || (j.maintenance_id && !i.job_id && (i.maintenance_id === j.maintenance_id || (taskOf(j) && mref(taskOf(j), i.notes)))));
+const pInv = p => { const js = pj(p), ids = new Set(js.map(j => j.id)), inv = (S.invs || []).filter(i => i.project_id === p.id || (i.job_id && ids.has(i.job_id)));
+  return {n: inv.length, list: inv, jt: js.length, ji: js.filter(j => jobInvs(j).length).length}; };
+const isDone = st => [...S.statuses.slice(-3), 'Completed'].includes(st);
+const noInv = r => r.status !== 'Cancelled' && (S.view === 'jobs' ? !jobInvs(r).length : S.view === 'projects' ? !pInv(r).n : !minvs(r).length);
+const rowCls = r => ['jobs', 'projects', 'maintenance'].includes(S.view) && noInv(r) ? ' class="ninv' + (isDone(r.status) ? ' hot' : '') + '"' : '';
+const ninvPill = (r, l) => `<span class="pill ${isDone(r.status) ? 'Overdue' : 'Partial'}">${l || 'No invoice'}</span>`;
+const jobInvPill = j => { const l = jobInvs(j); return l.length ? `<span class="pill Paid" title="${esc(l.map(inn).join(', '))}">${esc(l.map(inn).join(', '))}</span>` : j.status === 'Cancelled' ? '—' : ninvPill(j); };
+const projInvPill = p => { const v = pInv(p); return !v.n ? (p.status === 'Cancelled' ? '—' : ninvPill(p)) : v.jt && v.ji < v.jt ? `<span class="pill Partial">${v.ji}/${v.jt} jobs invoiced</span>` : `<span class="pill Paid">Invoiced (${v.n})</span>`; };
+const ninvChip = () => { if (!['jobs', 'projects', 'maintenance'].includes(S.view)) return ''; const n = S.rows.filter(noInv).length;
+  return n ? `<span class="ninvchip" data-ninv title="Click to show only these">⚠ ${n} not invoiced</span>` : '<span>All invoiced ✓</span>'; };
+document.addEventListener('click', e => { if (e.target.closest('[data-ninv]')) { S.f.inv = 'no'; S.page = 1; filterUI(); draw(); } });
+const CATS = [['maint', 'Maintenance', '#6366f1', 'wrench'], ['project', 'Projects', '#2563eb', 'folder'], ['supply', 'Item supply', '#f59e0b', 'box'], ['other', 'Other jobs', '#94a3b8', 'job']];
+function invCat(i) {
+  const j = i.job_id ? S.jobs.find(x => x.id === i.job_id) : null;
+  if (i.maintenance_id || (j && (j.maintenance_id || j.job_type === 'Maintenance')) || S.maint.some(t => mref(t, i.notes))) return 'maint';
+  const pid = i.project_id || (j && j.project_id), cv = j && j.quotation_id ? (S.qconv[j.quotation_id] || '') : '';
+  if (cv === 'Item Supply' || (!pid && j && S.supJobs && S.supJobs.has(j.id))) return 'supply';
+  return pid ? 'project' : 'other';
+}
 const mcode = id => { const x = S.maint.find(m => m.id === id); return x ? pad('M-', x.ref_no) : ''; };
 const pcost = r => jcost(r) + pj(r).reduce((a, j) => a + jcost(j), 0), pval = r => +r.value > 0 ? +r.value : pj(r).reduce((a, j) => a + +j.value, 0);
 const QUOTES = ['Every finished job is a promise kept. Keep them coming.', 'Small steps every day build big results.', 'Follow up today, and tomorrow’s invoice gets paid sooner.',
@@ -311,29 +342,29 @@ const M = {
       ['status','Status',r => qpill(r.status)],['job_id','Job',r => esc(jno(r.job_id))],['amount','Quote value',r => money(r.amount),1],['est','Est. profit',r => profit(r.amount, jcost(r)),1]],
     f: [['customer_id','Customer','cust'],['site','Site / location','text'],['title','Service / title','text',1],['description','Project details','textarea'],['quote_date','Quote date','date'],['valid_until','Valid until','date'],
       ['status','Status','select:Draft,Sent,Rejected'],...costF,['amount','Quotation total (LKR)','number'],['notes','Notes','textarea']]},
-  jobs: {label: 'Jobs', one: 'job', flt: ['status','priority','cust','proj','site'], dt: 'received_date', vk: 'value', no: ['Job No','job_no','J-'],
+  jobs: {label: 'Jobs', one: 'job', flt: ['status','priority','cust','proj','site','inv'], dt: 'received_date', vk: 'value', no: ['Job No','job_no','J-'],
     cols: [['job_no','Job',r => pad('J-', r.job_no)],['site','Site / location',r => r.site ? `<b>${esc(r.site)}</b>` : '<span style="opacity:.5">No location</span>'],['title','Title'],['customer_id','Customer',r => esc(cname(r.customer_id))],
       ['project_id','Project',r => esc(pname(r.project_id))],['job_type','Type'],['status','Status',r => pill(r.status)],['progress','Progress',r => `<div class="pgw"><div class="pgb"><i style="width:${+r.progress || 0}%"></i></div>${+r.progress || 0}%</div>`],['target_date','Target'],['value','Value',r => money(r.value),1],
-      ['cost','Cost',r => money(jcost(r)),1],['profit','Profit',r => profit(r.value, jcost(r)),1]],
+      ['jinv','Invoice',r => jobInvPill(r)],['cost','Cost',r => money(jcost(r)),1],['profit','Profit',r => profit(r.value, jcost(r)),1]],
     f: [['customer_id','Customer','cust'],['site','Site / location','text'],['technician','Assigned technician(s)','text'],['project_id','Project','proj'],['title','Job title','text',1],['job_type','Job type','select:Direct,Quotation,Maintenance'],['maintenance_id','Maintenance task','maint'],['description','Description','textarea'],
       ['status','Status','status'],['progress','Progress (%)','number'],['priority','Priority','select:Low,Normal,High,Urgent'],
       ['received_date','Received date','date'],['target_date','Target date','date'],['completion_date','Completion date','date'],
       ['value','Job value (LKR)','number'],...costF,['notes','Internal notes','textarea']]},
-  invoices: {label: 'Invoices', one: 'invoice', flt: ['status','cust'], dt: 'issue_date', vk: 'amount', no: ['Invoice No','invoice_no','INV-'],
+  invoices: {label: 'Invoices', one: 'invoice', flt: ['status','cust','cat'], dt: 'issue_date', vk: 'amount', no: ['Invoice No','invoice_no','INV-'],
     cols: [['invoice_no','Invoice',r => esc(inn(r))],['job_id','Job',r => esc(invJobs(r))],['customer_id','Customer',r => esc(cname(r.customer_id))],
-      ['issue_date','Issued'],['due_date','Due'],['amount','Invoice value',r => money(r.amount),1],
+      ['cat','Category',r => { const c = CATS.find(x => x[0] === invCat(r)); return `<span class="pill" style="background:${c[2]}22;color:${c[2]}">${c[1]}</span>`; }],['issue_date','Issued'],['due_date','Due'],['amount','Invoice value',r => money(r.amount),1],
       ['paid','Received',r => money(r.paid),1],['s','Status',r => {const s = invStatus(r); return `<span class="pill ${s}">${s}</span>`}]],
     f: [['job_id','Job (job number)','job',1],['issue_date','Issue date','date'],['due_date','Due date','date'],
       ['discount','Discount (LKR)','number'],['tax_rate','Tax / VAT (%)','number'],['amount','Invoice total (LKR)','number'],['notes','Notes','textarea']]},
-  projects: {label: 'Projects', one: 'project', flt: ['status','cust','priority'], dt: 'received_date', vk: 'value', no: ['Project No','project_no','P-'], get sts() { return S.statuses; },
+  projects: {label: 'Projects', one: 'project', flt: ['status','cust','priority','inv'], dt: 'received_date', vk: 'value', no: ['Project No','project_no','P-'], get sts() { return S.statuses; },
     cols: [['project_no','Project',r => pad('P-', r.project_no)],['name','Name'],['customer_id','Customer',r => esc(cname(r.customer_id))],['status','Status',r => pill(r.status)],['priority','Priority'],
       ['progress','Progress',r => `<div class="pgw"><div class="pgb"><i style="width:${+r.progress || 0}%"></i></div>${+r.progress || 0}%</div>`],['jobs','Jobs',r => pj(r).length],['target_date','Target'],
-      ['value','Value',r => money(pval(r)),1],['spent','Total cost',r => money(pcost(r)),1],['pprofit','Profit',r => profit(pval(r), pcost(r)),1]],
+      ['value','Value',r => money(pval(r)),1],['pinv','Invoice',r => projInvPill(r)],['spent','Total cost',r => money(pcost(r)),1],['pprofit','Profit',r => profit(pval(r), pcost(r)),1]],
     f: [['customer_id','Customer','cust'],['site','Site / location','text'],['name','Project name','text',1],['description','Description','textarea'],['status','Status','status'],['priority','Priority','select:Low,Normal,High,Urgent'],
       ['received_date','Received date','date'],['target_date','Target date','date'],['completion_date','Completion date','date'],['value','Project value (LKR)','number'],
       ['labour_cost','Labour charge (LKR)','number'],['material_cost','Material cost (LKR)','number'],['transport_cost','Transport cost (LKR)','number'],['other_cost','Other expenses (LKR)','number'],
       ['budget','Budget (LKR)','number'],['manager','Project manager','text'],['notes','Notes','textarea']]},
-  maintenance: {label: 'Maintenance', one: 'maintenance task', flt: ['status','cust','priority','site'], dt: 'next_due', vk: 'value', no: ['Ref No','ref_no','M-'], get sts() { return [...S.statuses, 'Due soon', 'Overdue']; },
+  maintenance: {label: 'Maintenance', one: 'maintenance task', flt: ['status','cust','priority','site','inv'], dt: 'next_due', vk: 'value', no: ['Ref No','ref_no','M-'], get sts() { return [...S.statuses, 'Due soon', 'Overdue']; },
     cols: [['ref_no','Ref',r => pad('M-', r.ref_no)],['title','Task'],['customer_id','Customer',r => esc(cname(r.customer_id))],['site','Site / asset',r => (r.site ? '<b>' + esc(r.site) + '</b>' : '') + (r.asset ? (r.site ? ' / ' : '') + esc(r.asset) : '')],
       ['frequency','Frequency'],['priority','Priority'],['next_due','Next due'],['completed','Completed date',r => r.completed ? shortDate(r.completed) : '<span style="opacity:.5">—</span>'],['mjobs','Jobs',r => mjobs(r),1],['ms','Status',r => gst(mstat(r))],['minv','Invoice',r => minvPill(r)],
       ['value','Value',r => money(r.value),1],['est_cost','Total cost',r => money(r.est_cost),1],['mprofit','Profit',r => profit(+r.value || 0, +r.est_cost || 0),1]],
@@ -404,7 +435,8 @@ async function loadMaint() {
   S.maint = r.data || [];
 }
 async function loadInvs() {
-  let r = await sb.from('invoices').select('id,invoice_no,doc_no,customer_id,job_id,maintenance_id,notes,amount,paid').is('deleted_at', null);
+  let r = await sb.from('invoices').select('id,invoice_no,doc_no,customer_id,job_id,maintenance_id,project_id,notes,amount,paid,issue_date,due_date').is('deleted_at', null);
+  if (r.error) r = await sb.from('invoices').select('id,invoice_no,doc_no,customer_id,job_id,maintenance_id,notes,amount,paid').is('deleted_at', null);
   if (r.error) r = await sb.from('invoices').select('customer_id,job_id,amount,paid').is('deleted_at', null);
   S.invs = r.data || [];
 }
@@ -451,7 +483,11 @@ function siteField(inp) {
     fill(); rm(); };
   fill(); bar.append(bAdd, bMan); fld.append(sel, bar, mg);
 }
-const reload = async () => { await loadCust(); await loadJobs(); await loadProjects(); await loadMaint(); await loadInvs(); await loadItems(); await loadSites(); };
+async function loadCat() {
+  const q = await sb.from('quotations').select('id,convert_to').is('deleted_at', null), u = await sb.from('supplies').select('job_id').is('deleted_at', null);
+  S.qconv = {}; (q.data || []).forEach(x => { S.qconv[x.id] = x.convert_to || ''; }); S.supJobs = new Set((u.data || []).map(x => x.job_id));
+}
+const reload = async () => { await loadCat(); await loadCust(); await loadJobs(); await loadProjects(); await loadMaint(); await loadInvs(); await loadItems(); await loadSites(); };
 
 /* ---------- navigation ---------- */
 function nav() {
@@ -602,11 +638,17 @@ async function dash() {
   const aQ = (q.data || []).filter(x => cfx(x) && ['Draft','Sent'].includes(x.status));
   const aM = (mt.data || []).filter(x => cfx(x) && mstat(x) === 'Overdue');
   const att = '<div class="att">' + [['file','Overdue invoices',aI.length,aI.length ? money(aI.reduce((t, x) => t + x.amount - x.paid, 0)) : '','invoices',{status:'Overdue'}],
-    ['job','Jobs past target date',aJ.length,'','jobs',{late:'1'}],['quote','Quotations awaiting decision',aQ.length,'','quotations',{}],['wrench','Maintenance overdue',aM.length,'','maintenance',{status:'Overdue'}]]
+    ['job','Jobs past target date',aJ.length,'','jobs',{late:'1'}],['quote','Quotations awaiting decision',aQ.length,'','quotations',{}],
+    ['job','Jobs not invoiced',S.jobs.filter(x => cfx(x) && x.status !== 'Cancelled' && !jobInvs(x).length).length,'','jobs',{inv:'no'}],['wrench','Maintenance not invoiced',S.maint.filter(x => cfx(x) && x.status !== 'Cancelled' && !minvs(x).length).length,'','maintenance',{inv:'no'}],['folder','Projects not invoiced',S.projects.filter(x => x.status !== 'Cancelled' && !pInv(x).n && (!cu || x.customer_id === cu)).length,'','projects',{inv:'no'}],['wrench','Maintenance overdue',aM.length,'','maintenance',{status:'Overdue'}]]
     .map((a, k) => `<button class="att-i${a[2] ? ' on' : ''}" style="animation-delay:${k * .06}s" data-go="${a[4]}" data-gf='${JSON.stringify(a[5])}'><span class="ai">${ic(a[0], 18)}</span><div><b>${a[2]}</b><span class="t">${a[1]}</span>${a[3] ? `<em>${a[3]}</em>` : ''}</div></button>`).join('') + '</div>';
   const mts = (mt.data || []).filter(x => !cu || x.customer_id === cu), mo = mts.filter(x => mstat(x) === 'Overdue').length, ap2 = (pr.data || []).filter(x => ![...S.statuses.slice(-3), 'Cancelled', 'On hold', 'Received'].includes(x.status) && (!cu || x.customer_id === cu)).length;
   const up = mts.filter(x => !['Completed','Cancelled'].includes(x.status) && x.next_due).sort((a, b) => a.next_due.localeCompare(b.next_due)).slice(0, 5);
   const upH = up.length ? '<table><tbody>' + up.map(x => `<tr><td>${esc(x.title)}</td><td>${esc(cname(x.customer_id))}</td><td>${esc(x.next_due)}</td><td>${gst(mstat(x))}</td></tr>`).join('') + '</tbody></table>' : '<div class="empty">No maintenance scheduled.</div>';
+  const cg = CATS.map(([k, l, c, ico]) => { const a = (S.invs || []).filter(x => ok(x, 'issue_date') && invCat(x) === k), A = sum(a, 'amount'), P = sum(a, 'paid'); return {k, l, c, ico, A, O: A - P, n: a.filter(x => +x.paid < +x.amount).length, pc: A ? Math.round(P / A * 100) : 0}; });
+  const OT = cg.reduce((t, x) => t + Math.max(0, x.O), 0);
+  const outH = `<div class="card" style="padding:20px;margin-bottom:18px"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><h2>Outstanding by category</h2><b>${money(OT)} <span class="mu" style="font-weight:500">to collect</span></b></div>
+    <div class="ob">${cg.map(x => `<i title="${x.l}" style="background:${x.c}" data-w="${OT ? Math.max(0, x.O) / OT * 100 : 0}%"></i>`).join('')}</div>
+    <div class="oc">${cg.map((x, k) => `<button style="--c:${x.c};animation-delay:${k * .07}s" data-go="invoices" data-gf='${JSON.stringify({cat: x.k, out: '1'})}'><small>${ic(x.ico, 14)} ${x.l}</small><b data-n="${x.O}" data-f="m">0</b><small>${x.n} unpaid invoice${x.n === 1 ? '' : 's'} · ${x.pc}% collected</small><div class="tr2"><i data-w="${x.pc}%"></i></div></button>`).join('')}</div></div>`;
   const hr = new Date().getHours(), greet = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening', ym = today().slice(0, 7);
   const doneM = (j.data || []).filter(x => (x.completion_date || '').startsWith(ym)).length, recM = sum(allInv.filter(x => (x.issue_date || '').startsWith(ym)), 'paid');
   const tp = S.target > 0 ? Math.min(100, Math.round(recM / S.target * 100)) : 0;
@@ -620,6 +662,7 @@ async function dash() {
     ${S.period === 'custom' ? `<div><label>From</label><input type="date" id="d1" value="${S.dfrom}"></div><div><label>To</label><input type="date" id="d2" value="${S.dto}"></div>` : ''}
     <div><label>Customer</label><select id="dc"><option value="">All customers</option>${S.cust.map(c => `<option value="${c.id}"${c.id === cu ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div></div>
     ${att}
+    ${outH}
     <div class="stats">${card('job','Open jobs',open,'i','linear-gradient(135deg,#2563eb,#0ea5e9)')}${card('file','Total invoiced',billed,'m','linear-gradient(135deg,#7c3aed,#2563eb)')}${card('cash','Money received',got,'m','linear-gradient(135deg,#059669,#10b981)')}${card('clock','Outstanding',billed - got,'m','linear-gradient(135deg,#ea580c,#f59e0b)')}${card('trend','Profit, completed jobs',sum(dj, 'value') - cost(dj),'m','linear-gradient(135deg,#0891b2,#06b6d4)')}${card('quote','Quotes awaiting approval',pq,'i','linear-gradient(135deg,#db2777,#f43f5e)')}${card('folder','Active projects',ap2,'i','linear-gradient(135deg,#4f46e5,#818cf8)')}${card('wrench','Maintenance overdue',mo,'i','linear-gradient(135deg,#dc2626,#f97316)')}</div>
     <div class="grid2"><div class="card"><h2>Jobs by status</h2>${bars}</div>
     <div class="card"><h2>Invoiced vs received, last 6 months</h2><div class="cols">${cols}</div><div class="lg"><span style="--c:var(--bl)">Invoiced</span><span style="--c:#10b981">Received</span></div></div></div>
@@ -658,6 +701,9 @@ function filterUI() {
   if (m.flt.includes('priority')) h += sel('priority', 'Priority', ['Low','Normal','High','Urgent'].map(x => [x, x]));
   if (m.flt.includes('cust')) h += sel('cust', 'Customer', S.cust.map(c => [c.id, c.name]));
   if (m.flt.includes('site')) h += sel('site', 'Location', (S.sites || []).map(x => [x.name, x.name]));
+  if (m.flt.includes('inv')) h += sel('inv', 'Invoice', [['no', 'Not invoiced'], ['yes', 'Invoiced']]);
+  if (m.flt.includes('cat')) h += sel('cat', 'Category', CATS.map(c => [c[0], c[1]]));
+  if (S.view === 'invoices') h += sel('out', 'Balance', [['1', 'Outstanding only']]);
   if (S.view === 'jobs') h += sel('pf', 'Profit', [['p','Profitable'],['l','Loss-making']]);
   if (m.dt) h += `<div class="dr"><label>From</label><input type="date" id="from" value="${f.from || ''}"></div><div class="dr"><label>To</label><input type="date" id="to" value="${f.to || ''}"></div>`;
   if (m.vk) h += `<div class="dr"><label>Min value</label><input type="number" id="min" min="0" placeholder="0" value="${f.min ?? ''}"></div><div class="dr"><label>Max value</label><input type="number" id="max" min="0" placeholder="Any" value="${f.max ?? ''}"></div>`;
@@ -665,7 +711,7 @@ function filterUI() {
   h += `<div class="cmw"><button class="btn g" id="cl">${ic('cols', 16)} Columns</button><div class="card cm hide" id="cm">${m.cols.map(c => `<label><input type="checkbox" data-col="${c[0]}"${hid.includes(c[0]) ? '' : ' checked'}>${c[1]}</label>`).join('')}</div></div><button class="btn g" id="clr">${ic('x', 16)} Clear</button>`;
   $('#fl').innerHTML = h;
   $('#q').oninput = e => { S.q = e.target.value.toLowerCase(); S.page = 1; draw(); };
-  ['status','priority','cust','site','from','to','min','max','pf','job','proj'].forEach(id => { const e = $('#' + id); if (e) e.oninput = () => { S.f[id] = e.value; S.page = 1; draw(); }; });
+  ['status','priority','cust','site','from','to','min','max','pf','job','proj','inv','cat','out'].forEach(id => { const e = $('#' + id); if (e) e.oninput = () => { S.f[id] = e.value; S.page = 1; draw(); }; });
   $('#cl').onclick = () => $('#cm').classList.toggle('hide');
   document.querySelectorAll('[data-col]').forEach(c => c.onchange = () => {
     const k = c.dataset.col, a = new Set(S.hid[S.view] || []); c.checked ? a.delete(k) : a.add(k); S.hid[S.view] = [...a];
@@ -681,6 +727,9 @@ function filt(r) {
   if (f.site && (r.site || '').trim().toLowerCase() !== f.site.trim().toLowerCase()) return false;
   if (f.late && !(r.target_date && r.target_date < today() && !S.statuses.slice(-3).includes(r.status))) return false;
   if (f.job && r.job_id !== f.job) return false;
+  if (f.inv && ['jobs','projects','maintenance'].includes(S.view) && (f.inv === 'no' ? !noInv(r) : noInv(r) || r.status === 'Cancelled')) return false;
+  if (f.cat && S.view === 'invoices' && invCat(r) !== f.cat) return false;
+  if (f.out && !(+r.paid < +r.amount)) return false;
   if (f.proj && r.project_id !== f.proj) return false;
   const d = m.dt ? r[m.dt] : null;
   if (f.from && (!d || d < f.from)) return false;
@@ -689,7 +738,7 @@ function filt(r) {
   if (f.pf && (f.pf === 'p' ? r.value - jcost(r) < 0 : r.value - jcost(r) >= 0)) return false;
   return true;
 }
-const val = (r, k) => k === 'cjobs' ? cjobs(r) : k === 'cout' ? cout(r) : k === 'mjobs' ? mjobs(r) : k === 's' ? invStatus(r) : k === 'ms' ? mstat(r) : k === 'customer_id' ? cname(r.customer_id) : k === 'job_id' ? jno(r.job_id) : k === 'project_id' ? pname(r.project_id) : k === 'est' ? r.amount - jcost(r) : k === 'profit' ? r.value - jcost(r) : k === 'jobs' ? pj(r).length : k === 'spent' ? pcost(r) : k === 'pprofit' ? pval(r) - pcost(r) : k === 'mprofit' ? r.value - r.est_cost : r[k];
+const val = (r, k) => k === 'jinv' ? jobInvs(r).length : k === 'pinv' ? pInv(r).n : k === 'cat' ? invCat(r) : k === 'cjobs' ? cjobs(r) : k === 'cout' ? cout(r) : k === 'mjobs' ? mjobs(r) : k === 's' ? invStatus(r) : k === 'ms' ? mstat(r) : k === 'customer_id' ? cname(r.customer_id) : k === 'job_id' ? jno(r.job_id) : k === 'project_id' ? pname(r.project_id) : k === 'est' ? r.amount - jcost(r) : k === 'profit' ? r.value - jcost(r) : k === 'jobs' ? pj(r).length : k === 'spent' ? pcost(r) : k === 'pprofit' ? pval(r) - pcost(r) : k === 'mprofit' ? r.value - r.est_cost : r[k];
 /* ---------- Maintenance: animated cost & profit overview with decision hints ---------- */
 const FREQ_N = {Weekly: 52, Monthly: 12, Quarterly: 4, 'Half-yearly': 2, Yearly: 1, 'One-time': 1};
 function mvData(rows) {
@@ -817,6 +866,53 @@ ${att.length ? `<div class="cd" style="margin-top:12px"><h3>Needs attention (low
     if (rm || a === b) return put(b);
     const step = t => { const k = Math.min(1, (t - t0) / 900), ease = 1 - Math.pow(1 - k, 3); put(a + (b - a) * ease); if (k < 1) requestAnimationFrame(step); }; requestAnimationFrame(step); });
 }
+function pvData(rows) {
+  const d = {rev: 0, cost: 0, lab: 0, mat: 0, trn: 0, oth: 0, sup: 0, per: [], inv: 0, rec: 0, noinv: []};
+  rows.forEach(r => { const js = pj(r), sm = k => (+r[k] || 0) + js.reduce((a, j) => a + (+j[k] || 0), 0), v = pval(r), c = pcost(r), pi = pInv(r), A = pi.list.reduce((a, i) => a + (+i.amount || 0), 0), P = pi.list.reduce((a, i) => a + (+i.paid || 0), 0);
+    d.rev += v; d.cost += c; d.lab += sm('labour_cost'); d.mat += sm('material_cost'); d.trn += sm('transport_cost'); d.sup += js.reduce((a, j) => a + (+j.supply_cost || 0), 0); d.oth += sm('other_cost'); d.inv += A; d.rec += P;
+    d.per.push({r, v, c, p: v - c, mg: v ? (v - c) / v : (c ? -1 : 0), bud: +r.budget || 0});
+    if (v > 0 && !pi.n && r.status !== 'Cancelled') d.noinv.push({r, v}); });
+  d.profit = d.rev - d.cost; d.margin = d.rev ? d.profit / d.rev * 100 : 0; return d;
+}
+function renderPViz(rows) {
+  let box = document.getElementById('mviz');
+  if (!box) { renderMViz([]); box = document.getElementById('mviz'); if (!box) return; }
+  if (!rows.length) { box.style.display = 'none'; return; } box.style.display = '';
+  if (S.mtarget === undefined) S.mtarget = 25;
+  const d = pvData(rows), tg = (+S.mtarget || 0) / 100, need = c => c / (1 - Math.min(tg, .95)), fm = n => S.cur + ' ' + Math.round(n).toLocaleString('en-LK'), pc = n => (n * 100).toFixed(0) + '%';
+  const loss = d.per.filter(x => x.p < 0), low = d.per.filter(x => x.p >= 0 && x.v > 0 && x.mg < tg), over = d.per.filter(x => x.bud > 0 && x.c > x.bud), near = d.per.filter(x => x.bud > 0 && x.c <= x.bud && x.c > x.bud * .9), t = [];
+  if (d.rev > 0) t.push(d.margin >= S.mtarget ? ['good', `Overall margin ${d.margin.toFixed(1)}% meets your ${S.mtarget}% target.`] : ['warn', `Overall margin is ${d.margin.toFixed(1)}%, below the ${S.mtarget}% target. Total project value must be about ${fm(need(d.cost))} (${fm(need(d.cost) - d.rev)} more) to reach it.`]);
+  if (loss.length) t.push(['bad', `${loss.length} project${loss.length > 1 ? 's are' : ' is'} making a loss of ${fm(-loss.reduce((a, x) => a + x.p, 0))}. Raise the price or cut cost.`]);
+  if (low.length) t.push(['warn', `${low.length} profitable project${low.length > 1 ? 's are' : ' is'} under target. Pricing them at target adds ${fm(low.reduce((a, x) => a + need(x.c) - x.v, 0))}.`]);
+  if (over.length) t.push(['bad', `${over.length} project${over.length > 1 ? 's are' : ' is'} over budget (${over.map(x => x.r.name).slice(0, 3).join(', ')}).`]); if (near.length) t.push(['warn', `${near.length} project${near.length > 1 ? 's have' : ' has'} used over 90% of budget.`]);
+  if (d.noinv.length) t.push(['warn', `${d.noinv.length} project${d.noinv.length > 1 ? 's worth ' : ' worth '}${fm(d.noinv.reduce((a, x) => a + x.v, 0))} have no invoice yet. Invoice them to start collecting.`]);
+  if (d.inv - d.rec > 0) t.push(['warn', `${fm(d.inv - d.rec)} invoiced on these projects is still unpaid.`]);
+  const parts = [['Labour', d.lab, '#6366f1'], ['Materials', d.mat, '#0ea5e9'], ['Item supply', d.sup, '#14b8a6'], ['Transport', d.trn, '#f59e0b'], ['Other', d.oth, '#94a3b8']], big = [...parts].sort((a, b) => b[1] - a[1])[0];
+  if (d.cost > 0 && big[1] / d.cost >= .5) t.push(['warn', `${big[0]} is ${pc(big[1] / d.cost)} of total cost. Review it first.`]);
+  const C = 2 * Math.PI * 52, cs = d.rev > 0 ? Math.min(1, d.cost / d.rev) : 0, ps = d.profit > 0 && d.rev > 0 ? 1 - cs : 0, pcol = d.profit >= 0 ? '#10b981' : '#ef4444', mx = Math.max(1, ...d.per.map(x => Math.abs(x.p)));
+  const top = [...d.per].sort((a, b) => b.p - a.p), shown = top.length > 8 ? [...top.slice(0, 4), ...top.slice(-4)] : top, att = d.per.filter(x => (x.v > 0 || x.c > 0) && x.mg < tg).sort((a, b) => a.mg - b.mg).slice(0, 5);
+  const kp = (l, v, c, f) => `<div class="k" style="--c:${c}"><label>${l}</label><b class="cu" data-f="${f}" data-to="${v}">${f === 'p' ? v.toFixed(1) + '%' : fm(v)}</b></div>`;
+  box.dataset.sig = '';
+  box.innerHTML = `<div class="mvh"><i class="o1"></i><i class="o2"></i><div><h2>Project cost &amp; profit overview</h2><div class="mvs">${rows.length} project${rows.length > 1 ? 's' : ''} · value, cost (project + its jobs + item supply), profit and budget</div></div>
+<div class="mvc"><label>Target margin <input id="mvt" type="number" min="0" max="90" value="${S.mtarget}">%</label><button class="mvx" id="mvx">${S.phide ? 'Show' : 'Hide'}</button></div></div>` + (S.phide ? '' : `
+<div class="kp">${kp('Project value', d.rev, '#2563eb', 'm')}${kp('Total cost', d.cost, '#f59e0b', 'm')}${kp('Profit', d.profit, pcol, 'm')}${kp('Margin (target ' + S.mtarget + '%)', d.margin, d.margin >= S.mtarget ? '#10b981' : '#f59e0b', 'p')}${kp('Invoiced', d.inv, '#7c3aed', 'm')}${kp('Received', d.rec, '#059669', 'm')}</div>
+<div class="g2"><div class="cd"><h3>Where the money goes</h3><div class="dn"><svg viewBox="0 0 150 150"><circle cx="75" cy="75" r="52" fill="none" stroke="var(--in)" stroke-width="18"/>
+ <circle class="arc" data-a="${d.profit < 0 ? C : cs * C}" cx="75" cy="75" r="52" fill="none" stroke="${d.profit < 0 ? '#ef4444' : '#f59e0b'}" stroke-width="18" stroke-dasharray="0 ${C}" transform="rotate(-90 75 75)"/>
+ <circle class="arc" data-a="${ps * C}" cx="75" cy="75" r="52" fill="none" stroke="#10b981" stroke-width="18" stroke-dasharray="0 ${C}" stroke-dashoffset="${-cs * C}" transform="rotate(-90 75 75)"/>
+ <text x="75" y="72" text-anchor="middle" font-size="22" font-weight="700" fill="var(--tx)">${d.margin.toFixed(0)}%</text><text x="75" y="90" text-anchor="middle" font-size="10.5" fill="var(--mu)">${d.profit >= 0 ? 'margin' : 'loss'}</text></svg>
+ <div class="dl"><span style="--c:#f59e0b">Cost <b>${fm(d.cost)}</b></span><span style="--c:${pcol}">${d.profit >= 0 ? 'Profit' : 'Loss'} <b>${fm(Math.abs(d.profit))}</b></span><span style="--c:#2563eb">Value <b>${fm(d.rev)}</b></span></div></div></div>
+<div class="cd"><h3>Cost breakdown</h3><div class="sb">${parts.map(x => `<i data-w="${d.cost ? x[1] / d.cost * 100 : 0}" style="--c:${x[2]}"></i>`).join('')}</div><div class="lg">${parts.map(x => `<span style="--c:${x[2]}">${x[0]}<b>${fm(x[1])} · ${d.cost ? pc(x[1] / d.cost) : '0%'}</b></span>`).join('')}</div></div></div>
+<div class="g2"><div class="cd"><h3>Profit by project <span style="font-weight:400;color:var(--mu);font-size:12px">(click to search)</span></h3>${shown.map(x => `<div class="lr" data-pn="${esc(x.r.name)}"><span class="n" title="${esc(x.r.name)}">${esc(x.r.name)}</span><div class="tr"><i data-w="${Math.abs(x.p) / mx * 100}" style="--c:${x.p >= 0 ? '#10b981' : '#ef4444'}"></i></div><b style="color:${x.p >= 0 ? '#059669' : '#dc2626'}">${fm(x.p)}</b></div>`).join('')}</div>
+<div class="cd"><h3>Suggestions to help you decide</h3><div class="tp">${t.map((x, i) => `<div class="t" style="--c:${{good: '#10b981', warn: '#f59e0b', bad: '#ef4444'}[x[0]]};animation-delay:${i * .07}s">${esc(x[1])}</div>`).join('') || '<span class="mu">Add values and costs to see suggestions.</span>'}</div></div></div>
+${att.length ? `<div class="cd" style="margin-top:12px"><h3>Needs attention (lowest margin first)</h3><div style="overflow-x:auto"><table class="at"><thead><tr><th>Project</th><th class="a">Cost</th><th class="a">Value</th><th class="a">Profit</th><th class="a">Value for ${S.mtarget}% margin</th></tr></thead><tbody>${att.map(x => `<tr><td>${esc(x.r.name)}</td><td class="a">${fm(x.c)}</td><td class="a">${fm(x.v)}</td><td class="a" style="color:${x.p >= 0 ? '#059669' : '#dc2626'}"><b>${fm(x.p)}</b></td><td class="a">${fm(need(x.c))}</td></tr>`).join('')}</tbody></table></div></div>` : ''}`);
+  box.querySelector('#mvt').onchange = e => { S.mtarget = Math.max(0, Math.min(90, +e.target.value || 0)); draw(); };
+  box.querySelector('#mvx').onclick = () => { S.phide = !S.phide; draw(); };
+  box.querySelectorAll('[data-pn]').forEach(r => r.onclick = () => { S.q = r.dataset.pn.toLowerCase(); filterUI(); draw(); });
+  requestAnimationFrame(() => requestAnimationFrame(() => { box.querySelectorAll('.arc').forEach(c => { c.style.strokeDasharray = c.dataset.a + ' ' + C; }); box.querySelectorAll('[data-w]').forEach(e => { e.style.width = Math.min(100, +e.dataset.w) + '%'; }); }));
+  const rm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  box.querySelectorAll('.cu').forEach(e => { const b = +e.dataset.to || 0, f = e.dataset.f, t0 = performance.now(), put = v => e.textContent = f === 'p' ? v.toFixed(1) + '%' : fm(v); if (rm) return put(b);
+    const step = x => { const k = Math.min(1, (x - t0) / 900); put(b * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(step); }; requestAnimationFrame(step); });
+}
 function draw() {
   const m = M[S.view], {k, d} = S.sort, hid = S.hid[S.view] || [], cols = m.cols.filter(c => !hid.includes(c[0]));
   const rows = S.rows.filter(filt).sort((a, b) => { const x = val(a, k), y = val(b, k);
@@ -824,19 +920,20 @@ function draw() {
   const tot = c => rows.reduce((a, r) => a + +r[c], 0), ch = t => `<span>${t}</span>`;
   const tcost = rows.reduce((a, r) => a + jcost(r), 0);
   if (S.view === 'maintenance') renderMViz(rows);
+  if (S.view === 'projects') renderPViz(rows);
   $('#sub').innerHTML = ch(rows.length + ' of ' + S.rows.length) + (S.view === 'jobs' ? ch('Value ' + money(tot('value'))) + ch('Cost ' + money(tcost)) + ch('Profit ' + money(tot('value') - tcost))
     : S.view === 'quotations' ? ch('Quoted ' + money(tot('amount'))) + ch('Est. profit ' + money(tot('amount') - tcost))
     : S.view === 'supplies' ? ch('Cost ' + money(tot('total_cost'))) + ch('Sale value ' + money(tot('total_price'))) + ch('Margin ' + money(tot('total_price') - tot('total_cost')))
     : S.view === 'projects' ? ch('Budget ' + money(tot('budget'))) + ch('Active ' + rows.filter(r => r.status === 'Active').length)
     : S.view === 'maintenance' ? ch(rows.filter(r => mstat(r) === 'Overdue').length + ' overdue') + ch(rows.filter(r => mstat(r) === 'Due soon').length + ' due soon')
-    : S.view === 'invoices' ? ch('Invoiced ' + money(tot('amount'))) + ch('Received ' + money(tot('paid'))) + ch('Outstanding ' + money(tot('amount') - tot('paid'))) : '');
+    : S.view === 'invoices' ? ch('Invoiced ' + money(tot('amount'))) + ch('Received ' + money(tot('paid'))) + ch('Outstanding ' + money(tot('amount') - tot('paid'))) : '') + ninvChip();
   const pages = Math.max(1, Math.ceil(rows.length / S.ps)); S.page = Math.min(S.page, pages);
   const vis = rows.slice((S.page - 1) * S.ps, S.page * S.ps);
   if (!vis.length) { $('#tb').innerHTML = `<div class="empty">${ic('filter', 36)}<br>${S.rows.length ? 'No records match these filters. Try clearing them.' : 'No ' + m.label.toLowerCase() + ' yet. Use “Add ' + m.one + '” to create the first one.'}</div>`; $('#pg').innerHTML = ''; return; }
   $('#tb').style.padding = '0';
   const mm = S.view === 'maintenance';
   $('#tb').innerHTML = (mm ? '<div id="msbar" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--bd,#e5e7eb)"></div>' : '') + '<table><thead><tr>' + (mm ? '<th style="width:34px"><input type="checkbox" id="msa" title="Select all on this page" aria-label="Select all"></th>' : '') + cols.map(c => `<th data-s="${c[0]}"${c[3] ? ' class="a"' : ''}>${c[1]}${k === c[0] ? (d > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '<th></th></tr></thead><tbody>'
-    + vis.map(r => '<tr>' + (mm ? `<td><input type="checkbox" data-ms="${r.id}" aria-label="Select task"${S.msel[r.id] ? ' checked' : ''}></td>` : '') + cols.map(c => `<td${c[3] ? ' class="a"' : ''}>${c[2] ? c[2](r) : esc(r[c[0]])}</td>`).join('')
+    + vis.map(r => '<tr' + rowCls(r) + '>' + (mm ? `<td><input type="checkbox" data-ms="${r.id}" aria-label="Select task"${S.msel[r.id] ? ' checked' : ''}></td>` : '') + cols.map(c => `<td${c[3] ? ' class="a"' : ''}>${c[2] ? c[2](r) : esc(r[c[0]])}</td>`).join('')
       + `<td class="a">${acts(r)}<button class="btn g s" title="Edit" aria-label="Edit" data-e="${r.id}">${ic('edit', 15)}</button> <button class="btn g s" title="Delete" aria-label="Delete" data-d="${r.id}">${ic('trash', 15)}</button></td></tr>`).join('') + '</tbody></table>';
   $('#pg').innerHTML = `<select id="ps" aria-label="Rows per page">${[10,15,25,50,100].map(n => `<option value="${n}"${S.ps === n ? ' selected' : ''}>${n} per page</option>`).join('')}</select>`
     + (pages > 1 ? `<button class="btn g s" id="pv"${S.page < 2 ? ' disabled' : ''}>Previous</button><span class="mu">Page ${S.page} of ${pages}</span><button class="btn g s" id="nx"${S.page >= pages ? ' disabled' : ''}>Next</button>` : '');
