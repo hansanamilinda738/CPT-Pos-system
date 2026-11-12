@@ -315,7 +315,7 @@ const M = {
     cols: [['job_no','Job',r => pad('J-', r.job_no)],['site','Site / location',r => r.site ? `<b>${esc(r.site)}</b>` : '<span style="opacity:.5">No location</span>'],['title','Title'],['customer_id','Customer',r => esc(cname(r.customer_id))],
       ['project_id','Project',r => esc(pname(r.project_id))],['job_type','Type'],['status','Status',r => pill(r.status)],['progress','Progress',r => `<div class="pgw"><div class="pgb"><i style="width:${+r.progress || 0}%"></i></div>${+r.progress || 0}%</div>`],['target_date','Target'],['value','Value',r => money(r.value),1],
       ['cost','Cost',r => money(jcost(r)),1],['profit','Profit',r => profit(r.value, jcost(r)),1]],
-    f: [['customer_id','Customer','cust'],['site','Site / location','text'],['technician','Assigned technician(s)','text'],['project_id','Project','proj'],['title','Job title','text',1],['job_type','Job type','select:Direct,Quotation,Maintenance'],['maintenance_id','Maintenance task','maint'],['description','Description','textarea'],
+    f: [['customer_id','Customer','cust'],['site','Site / location','text'],['technician','Assigned technician(s)','text'],['project_id','Project','proj'],['title','Job title','text',1],['job_type','Job type','select:Direct,Quotation,Project,Maintenance'],['maintenance_id','Maintenance task','maint'],['description','Description','textarea'],
       ['status','Status','status'],['progress','Progress (%)','number'],['priority','Priority','select:Low,Normal,High,Urgent'],
       ['received_date','Received date','date'],['target_date','Target date','date'],['completion_date','Completion date','date'],
       ['value','Job value (LKR)','number'],...costF,['notes','Internal notes','textarea']]},
@@ -1388,7 +1388,8 @@ async function form(row, pre) {
   if (S.view === 'jobs') {
     const jt = $('#df [name=job_type]'), stt = $('#df [name=status]'), hint = document.createElement('div');
     hint.className = 'full mu'; hint.style.fontSize = '13px'; jt.closest('.fld').after(hint);
-    const upd = () => { hint.innerHTML = jt.value === 'Quotation' && !(row && row.quotation_id) ? ic('quote', 14) + ' A draft quotation will be created automatically in the Quotations tab.' : ''; };
+    const upd = () => { hint.innerHTML = jt.value === 'Quotation' && !(row && row.quotation_id) ? ic('quote', 14) + ' A draft quotation will be created automatically in the Quotations tab.' : jt.value === 'Project' && !nm('project_id').value ? ic('job', 14) + ' A project will be created automatically in the Projects tab with this job\'s details.' : ''; };
+    nm('project_id').addEventListener('change', () => jt.onchange && upd());
     jt.onchange = () => { upd();
       if (jt.value === 'Quotation' && S.statuses.includes('Quotation') && !(row && row.quotation_id) && stt.value === S.statuses[0]) stt.value = 'Quotation';
       else if (jt.value !== 'Quotation' && stt.value === 'Quotation' && !(row && row.quotation_id)) stt.value = S.statuses[0]; };
@@ -1439,6 +1440,14 @@ async function form(row, pre) {
     const jb = S.view === 'invoices' ? S.jobs.find(x => x.id === o.job_id) : null;
     if (S.view === 'invoices') { if (jb) o.customer_id = jb.customer_id; else if (preCust) o.customer_id = preCust; else return toast('Select a job'); }
     if (S.view === 'jobs' && o.job_type !== 'Maintenance') o.maintenance_id = null;
+    let newProj = null;
+    if (S.view === 'jobs' && o.job_type === 'Project' && !o.project_id) {   // a job marked as a Project creates its project automatically (the job carries the money, so the project value stays 0)
+      const po = {customer_id: o.customer_id, name: o.title, description: o.description, status: o.status, priority: o.priority || 'Normal', progress: o.progress || 0, received_date: o.received_date, target_date: o.target_date, completion_date: o.completion_date, manager: o.technician, notes: o.notes, value: 0};
+      let pr = await sb.from('projects').insert(po).select('id,project_no').single();
+      if (pr.error && /status/.test(pr.error.message)) { delete po.status; pr = await sb.from('projects').insert(po).select('id,project_no').single(); }
+      if (pr.error) return toast('Project not created: ' + pr.error.message);
+      o.project_id = pr.data.id; newProj = pr.data.project_no;
+    }
     const projSite = S.view === 'projects' ? o.site : null; if (S.view === 'projects') delete o.site;   // the site belongs to the project's job
     const projLines = isProj && ed ? ed.read() : [];
     if (isProj && projLines.length) { o.value = 0; o.labour_cost = 0; o.material_cost = 0; o.transport_cost = 0; o.other_cost = 0; }   // the job carries the money, so the project must not count it twice
@@ -1467,7 +1476,7 @@ async function form(row, pre) {
     }
     if (o.site) await saveSite(o.site, true);
     const qmsg = S.view === 'jobs' && o.job_type === 'Quotation' && !(row && row.quotation_id);
-    $('#dlg').close(); toast(qmsg ? 'Job saved. A draft quotation was added to the Quotations tab.' : newJob ? 'Project saved. Job ' + pad('J-', newJob) + ' was created for it.' : row ? 'Saved' : 'Created');
+    $('#dlg').close(); toast(qmsg ? 'Job saved. A draft quotation was added to the Quotations tab.' : newProj ? 'Job saved. Project ' + pad('P-', newProj) + ' was created automatically in the Projects tab.' : newJob ? 'Project saved. Job ' + pad('J-', newJob) + ' was created for it.' : row ? 'Saved' : 'Created');
     if (S.view === 'invoices' && o.amount > 0 && o.paid >= o.amount) confetti();
     await reload();
     list();
