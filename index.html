@@ -126,7 +126,7 @@ aside button:hover svg{animation:wig .5s}
 .bch{background:rgba(255,255,255,.14);border-radius:14px;padding:12px 16px;min-width:130px}.bch b{display:block;font-size:20px;font-weight:800}.bch span{font-size:12px;color:#d5e1fb}
 .tbar{height:7px;border-radius:7px;background:rgba(255,255,255,.25);margin-top:8px;overflow:hidden}.tbar i{display:block;height:100%;background:#fff;border-radius:7px;transition:width 1.2s cubic-bezier(.2,.8,.2,1)}
 .pgw{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600}.pgb{width:90px;height:8px;border-radius:8px;background:var(--bd);overflow:hidden}.pgb i{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,var(--bl),var(--bl2));animation:grow 1.1s cubic-bezier(.2,.8,.2,1)}
-.li table input,.li table select{padding:6px 8px;min-width:64px}.li .ld{min-width:190px}.li textarea.ld{resize:none;overflow:hidden;line-height:1.35;min-height:36px;white-space:pre-wrap;word-break:break-word}.li td:nth-child(2){position:relative;min-width:220px}.sugg{position:absolute;left:8px;right:8px;top:calc(100% - 4px);z-index:30;background:var(--in,#fff);border:1px solid var(--bd);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:220px;overflow:auto}.sugg div{padding:7px 10px;cursor:pointer;border-bottom:1px solid rgba(128,128,128,.2)}.sugg div:hover{background:rgba(14,165,233,.15)}.li .lq,.li .lc,.li .lp{min-width:84px}.li td{padding:6px 8px}
+.li table input,.li table select{padding:6px 8px;min-width:64px}.li .ld{min-width:190px}textarea.ag{resize:none;overflow:hidden;line-height:1.4;white-space:pre-wrap;word-break:break-word;display:block}.li textarea.ld{resize:none;overflow:hidden;line-height:1.35;min-height:36px;white-space:pre-wrap;word-break:break-word}.li td:nth-child(2){position:relative;min-width:220px}.sugg{position:absolute;left:8px;right:8px;top:calc(100% - 4px);z-index:30;background:var(--in,#fff);border:1px solid var(--bd);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:220px;overflow:auto}.sugg div{padding:7px 10px;cursor:pointer;border-bottom:1px solid rgba(128,128,128,.2)}.sugg div:hover{background:rgba(14,165,233,.15)}.li .lq,.li .lc,.li .lp{min-width:84px}.li td{padding:6px 8px}
 .liact{display:flex;gap:12px;align-items:center;margin-top:8px;flex-wrap:wrap}
 .lisum{display:flex;gap:18px;flex-wrap:wrap;font-weight:700;margin-top:8px}
 .opt{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--bd);border-radius:12px;cursor:pointer;margin:0;color:var(--tx);font-size:14px}
@@ -462,7 +462,7 @@ function aiQuotationPage() {
   $('#main').innerHTML = `<div class="ph"><div class="hh"><span class="hi">${ic('sparkle',22)}</span><div><h1>AI Quotation Generator</h1><p class="mu">Describe a job or upload a customer BOQ, photo or PDF. AI prepares an editable draft using your item catalog.</p></div></div></div>
   <div class="card" style="padding:18px;display:grid;gap:14px">
     <div class="fld"><label>Customer *</label><select id="ai-customer"><option value="">Select customer</option>${S.cust.map(c=>`<option value="${c.id}">${esc(c.name)}${c.phone?' · '+esc(c.phone):''}</option>`).join('')}</select></div>
-    <div class="fld"><label>Job description / instructions</label><textarea id="ai-description" rows="5" placeholder="Example: Install 6 IP CCTV cameras, 157 m CAT6 cable in PVC casing, configure NVR and test the system..."></textarea></div>
+    <div class="fld"><label>Job description / instructions</label><textarea class="ag" id="ai-description" rows="5" placeholder="Example: Install 6 IP CCTV cameras, 157 m CAT6 cable in PVC casing, configure NVR and test the system..."></textarea></div>
     <div class="fld"><label>Upload BOQ / photo / PDF (up to 4 files; JPG, PNG, WEBP, PDF)</label><input id="ai-files" type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf"><small class="mu">Maximum 8 MB per file. Do not upload confidential documents unnecessarily.</small></div>
     <div class="row" style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" id="ai-generate">${ic('sparkle',16)} Generate draft</button><span class="mu" id="ai-status" style="align-self:center">Prices are taken only from your existing Items catalog. Unmatched items need manual pricing.</span></div>
   </div><div id="ai-result" style="margin-top:16px"></div>`;
@@ -522,12 +522,12 @@ function renderAiDraft() {
   if(!AI_DRAFT) return;
   const d=AI_DRAFT.draft;
   $('#ai-result').innerHTML=`<div class="card" style="padding:18px;display:grid;gap:12px"><div><h2>Review AI quotation draft</h2><p class="mu">This is not saved yet. Verify quantities, specifications, unit costs and selling prices.</p></div>
-  <div class="fld"><label>Quotation title</label><input id="ai-title" value="${esc(d.title||'Engineering works')}"></div>
-  <div class="fld"><label>Site / location</label><input id="ai-site" list="sitelist" placeholder="Pick from the saved list or type" value="${esc(d.site||'')}"></div>
-  <div class="fld"><label>Description</label><textarea id="ai-desc-edit" rows="2">${esc(d.description||$('#ai-description')?.value||'')}</textarea></div>
+  <div class="fld"><label>Quotation title</label><textarea class="ag ag1" rows="1" id="ai-title">${esc(d.title||'Engineering works')}</textarea></div>
+  <div class="fld"><label>Site / location</label><textarea class="ag ag1" rows="1" id="ai-site" placeholder="Pick from the saved list or type">${esc(d.site||'')}</textarea></div>
+  <div class="fld"><label>Description</label><textarea class="ag" id="ai-desc-edit" rows="2">${esc(d.description||$('#ai-description')?.value||'')}</textarea></div>
   <div class="ct tw li"><table><thead><tr><th>Type</th><th>Description</th><th>Qty</th><th>Unit</th><th>Cost/unit</th><th>Sell/unit</th><th></th></tr></thead><tbody id="ai-lines"></tbody></table></div>
   <div class="row" style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn g s" id="ai-add-line">+ Add line</button><span class="mu" id="ai-totals"></span></div>
-  <div class="fld"><label>Additional notes / review flags</label><textarea id="ai-notes" rows="3" placeholder="Add assumptions, exclusions or missing-price notes">${esc(AI_DRAFT.lines.filter(x=>x.review).map(x=>x.description+': '+x.review_note).join('\n'))}</textarea></div>
+  <div class="fld"><label>Additional notes / review flags</label><textarea class="ag" id="ai-notes" rows="3" placeholder="Add assumptions, exclusions or missing-price notes">${esc(AI_DRAFT.lines.filter(x=>x.review).map(x=>x.description+': '+x.review_note).join('\n'))}</textarea></div>
   <div class="foot"><button class="btn g" id="ai-cancel">Discard draft</button><button class="btn" id="ai-save">Confirm & save quotation</button></div></div>`;
   const tb=$('#ai-lines');
   const rowHtml=(l,i)=>`<tr data-i="${i}"><td><select class="aik">${KINDS.filter(k=>!['Expense','Location'].includes(k)).map(k=>`<option${k===l.kind?' selected':''}>${k}</option>`).join('')}</select></td><td><input class="aid" value="${esc(l.description)}" style="min-width:220px"><small style="display:block;color:${l.review?'#b45309':'#15803d'}">${l.review?'Review: '+esc(l.review_note||'Check details / price'):'Catalog matched / verify'}</small></td><td><input class="aiq" type="number" min="0" step="0.01" value="${l.quantity}" style="width:75px"></td><td><input class="aiu" value="${esc(l.unit)}" style="width:65px"></td><td><input class="aic" type="number" min="0" step="0.01" value="${l.unit_cost}" style="width:100px"></td><td><input class="aip" type="number" min="0" step="0.01" value="${l.unit_price}" style="width:100px"></td><td><button type="button" class="btn g s air">×</button></td></tr>`;
@@ -1319,10 +1319,17 @@ async function setQuote(id, st) {
   toast(st === 'Approved' ? 'Approved. Job ' + jno(data && data.job_id) + ' is ready.' : 'Quotation marked as ' + st);
   if (st === 'Approved') confetti(); list();
 }
+/* every data-entry box grows with what is typed, so all of the text stays visible (wraps onto the next lines) */
+const agGrow = el => { if (!el.offsetParent) return; el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; };
+const agAll = () => document.querySelectorAll('textarea.ag').forEach(agGrow);
+document.addEventListener('input', e => { if (e.target.matches && e.target.matches('textarea.ag')) agGrow(e.target); });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && e.target.matches && e.target.matches('textarea.ag1')) { e.preventDefault(); const f = e.target.form; if (f && f.requestSubmit) f.requestSubmit(); } });   // single-line fields: Enter still saves
+let agT = 0; new MutationObserver(() => { clearTimeout(agT); agT = setTimeout(agAll, 30); }).observe(document.body, {childList: true, subtree: true});
+window.addEventListener('resize', agAll);
 function input(f, v) {
   const [k, l, t, req] = f, val = v ?? '';
   let h;
-  if (t === 'textarea') h = `<textarea name="${k}" rows="3">${esc(val)}</textarea>`;
+  if (t === 'textarea') h = `<textarea class="ag" name="${k}" rows="3">${esc(val)}</textarea>`;
   else if (t === 'cust') h = `<select name="${k}"><option value="">None</option>${S.cust.map(c => `<option value="${c.id}"${c.id === val ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}</select>`;
   else if (t === 'job') h = `<select name="${k}" required><option value="">Select job number</option>${S.jobs.map(j => `<option value="${j.id}"${j.id === val ? ' selected' : ''}>${pad('J-', j.job_no)} - ${j.site ? esc(j.site) + ' | ' : ''}${esc(j.title)}</option>`).join('')}</select>`;
   else if (t === 'maint') h = `<select name="${k}"><option value="">Not linked</option>${S.maint.map(x => `<option value="${x.id}"${x.id === val ? ' selected' : ''}>${pad('M-', x.ref_no)} - ${esc(x.title)}</option>`).join('')}</select>`;
@@ -1330,7 +1337,8 @@ function input(f, v) {
   else if (t === 'status' || t.startsWith('select:')) {
     const o = t === 'status' ? (val && !S.statuses.includes(val) ? [...S.statuses, val] : S.statuses) : (val && !t.slice(7).split(',').includes(val) ? [...t.slice(7).split(','), val] : t.slice(7).split(','));
     h = `<select name="${k}">${o.map(x => `<option${x === val ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
-  } else h = `<input name="${k}" type="${t}"${t === 'number' ? ' step="0.01" min="0"' + (k === 'progress' ? ' max="100"' : '') : ''} value="${esc(val)}"${req ? ' required' : ''}>`;
+  } else if (t === 'text') h = `<textarea class="ag ag1" rows="1" name="${k}"${req ? ' required' : ''}>${esc(val)}</textarea>`;
+  else h = `<input name="${k}" type="${t}"${t === 'number' ? ' step="0.01" min="0"' + (k === 'progress' ? ' max="100"' : '') : ''} value="${esc(val)}"${req ? ' required' : ''}>`;
   return `<div class="fld${t === 'textarea' ? ' full' : ''}"><label>${l.replace('LKR', S.cur)}${req ? ' *' : ''}</label>${h}</div>`;
 }
 function dflt(f) {
@@ -1444,29 +1452,29 @@ async function del(id) {
 function settings() {
   $('#main').innerHTML = `<div class="ph"><div class="hh"><span class="hi">${ic('cog', 22)}</span><div><h1>Settings</h1><p class="mu" style="margin:2px 0 0">Company, defaults and workflow.</p></div></div></div>
     <div class="grid2" style="align-items:start"><div class="card"><h2>Company and defaults</h2>
-      <div class="fld"><label>Company name</label><input id="s1" value="${esc(S.co)}"></div>
+      <div class="fld"><label>Company name</label><textarea class="ag ag1" rows="1" id="s1">${esc(S.co)}</textarea></div>
       <div class="fld"><label>Currency code</label><input id="s2" maxlength="5" value="${esc(S.cur)}"></div>
       <div class="fld"><label>Default payment terms (days until invoice is due)</label><input id="s3" type="number" min="0" value="${S.terms}"></div>
       <div class="fld"><label>Default job duration (days until target date)</label><input id="s4" type="number" min="0" value="${S.dur}"></div>
       <div class="fld"><label>Rows per page</label><select id="s5">${[10,15,25,50,100].map(n => `<option${S.ps === n ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
       <div class="fld"><label>Monthly income target (leave 0 to hide)</label><input id="s6" type="number" min="0" value="${S.target}"></div>
-      <div class="fld"><label>Company address (printed on documents)</label><textarea id="s7" rows="2">${esc(S.addr)}</textarea></div>
-      <div class="fld"><label>Company phone</label><input id="s8" value="${esc(S.phone)}"></div>
-      <div class="fld"><label>Company email</label><input id="s9" value="${esc(S.email)}"></div>
-      <div class="fld"><label>Bank details (printed on invoices)</label><textarea id="s10" rows="3">${esc(S.bank)}</textarea></div>
-      <div class="fld"><label>Footer note on invoices and quotations</label><input id="s11" value="${esc(S.foot)}"></div>
+      <div class="fld"><label>Company address (printed on documents)</label><textarea class="ag" id="s7" rows="2">${esc(S.addr)}</textarea></div>
+      <div class="fld"><label>Company phone</label><textarea class="ag ag1" rows="1" id="s8">${esc(S.phone)}</textarea></div>
+      <div class="fld"><label>Company email</label><textarea class="ag ag1" rows="1" id="s9">${esc(S.email)}</textarea></div>
+      <div class="fld"><label>Bank details (printed on invoices)</label><textarea class="ag" id="s10" rows="3">${esc(S.bank)}</textarea></div>
+      <div class="fld"><label>Footer note on invoices and quotations</label><textarea class="ag ag1" rows="1" id="s11">${esc(S.foot)}</textarea></div>
       <div class="fld"><label>Letterhead banner (printed at the top of quotations and invoices)</label><input id="s12" type="file" accept="image/*"><div id="lgp" style="margin-top:8px"><img src="${S.hdr || DEFAULT_HDR}" alt="Letterhead" style="max-width:100%"></div><button type="button" class="btn g s" id="s12r" style="margin-top:8px">Use the default ConnectPro letterhead</button></div>
       <div class="fld"><label>Quotation number prefix (example: C26_10_0011)</label><input id="s13" maxlength="6" value="${esc(S.qpre)}"></div>
       <div class="fld"><label>Invoice number prefix</label><input id="s14" maxlength="6" value="${esc(S.ipre)}"></div>
       <div class="fld"><label>Quotation valid for (days)</label><input id="s15" type="number" min="1" value="${S.qvalid}"></div>
-      <div class="fld"><label>Prepared by (name)</label><input id="s16" value="${esc(S.prepName || 'Kanishka Kumarasinghe')}"></div>
-      <div class="fld"><label>Prepared by (title)</label><input id="s17" value="${esc(S.prepTitle || 'Executive')}"></div>
-      <div class="fld"><label>Authorized by (name)</label><input id="s18" value="${esc(S.authName || 'Hansana Milinda')}"></div>
-      <div class="fld"><label>Authorized by (title)</label><input id="s19" value="${esc(S.authTitle || 'Owner')}"></div>
-      <div class="fld"><label>Remark printed on documents (leave empty for the default text)</label><textarea id="s20" rows="2">${esc(S.remark)}</textarea></div>
+      <div class="fld"><label>Prepared by (name)</label><textarea class="ag ag1" rows="1" id="s16">${esc(S.prepName || 'Kanishka Kumarasinghe')}</textarea></div>
+      <div class="fld"><label>Prepared by (title)</label><textarea class="ag ag1" rows="1" id="s17">${esc(S.prepTitle || 'Executive')}</textarea></div>
+      <div class="fld"><label>Authorized by (name)</label><textarea class="ag ag1" rows="1" id="s18">${esc(S.authName || 'Hansana Milinda')}</textarea></div>
+      <div class="fld"><label>Authorized by (title)</label><textarea class="ag ag1" rows="1" id="s19">${esc(S.authTitle || 'Owner')}</textarea></div>
+      <div class="fld"><label>Remark printed on documents (leave empty for the default text)</label><textarea class="ag" id="s20" rows="2">${esc(S.remark)}</textarea></div>
       <div class="foot" style="margin-top:16px"><button class="btn" id="sp">${ic('check', 16)} Save preferences</button></div></div>
     <div class="card"><h2>Job statuses</h2><p class="mu" style="margin:4px 0 0">One status per line, in workflow order. The last three count as finished.</p>
-      <div class="fld"><textarea id="ss" rows="11">${esc(S.statuses.join('\n'))}</textarea></div>
+      <div class="fld"><textarea class="ag" id="ss" rows="11">${esc(S.statuses.join('\n'))}</textarea></div>
       <div class="foot" style="margin-top:16px"><button class="btn" id="sv">${ic('check', 16)} Save statuses</button></div></div></div>
     <div class="card" style="padding:20px;margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><h2>Account</h2><span class="mu">Signed in as ${esc(S.user)}</span></div><button class="btn g" id="rc">Reset table column layout</button></div>`;
   let newLogo = S.hdr || '';
