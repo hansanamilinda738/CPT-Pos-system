@@ -321,7 +321,7 @@ const M = {
     cols: [['project_no','Project',r => pad('P-', r.project_no)],['name','Name'],['customer_id','Customer',r => esc(cname(r.customer_id))],['status','Status',r => pill(r.status)],['priority','Priority'],
       ['progress','Progress',r => `<div class="pgw"><div class="pgb"><i style="width:${+r.progress || 0}%"></i></div>${+r.progress || 0}%</div>`],['jobs','Jobs',r => pj(r).length],['target_date','Target'],
       ['value','Value',r => money(pval(r)),1],['spent','Total cost',r => money(pcost(r)),1],['pprofit','Profit',r => profit(pval(r), pcost(r)),1]],
-    f: [['customer_id','Customer','cust'],['name','Project name','text',1],['description','Description','textarea'],['status','Status','status'],['priority','Priority','select:Low,Normal,High,Urgent'],
+    f: [['customer_id','Customer','cust'],['site','Site / location','text'],['name','Project name','text',1],['description','Description','textarea'],['status','Status','status'],['priority','Priority','select:Low,Normal,High,Urgent'],
       ['received_date','Received date','date'],['target_date','Target date','date'],['completion_date','Completion date','date'],['value','Project value (LKR)','number'],
       ['labour_cost','Labour charge (LKR)','number'],['material_cost','Material cost (LKR)','number'],['transport_cost','Transport cost (LKR)','number'],['other_cost','Other expenses (LKR)','number'],
       ['budget','Budget (LKR)','number'],['manager','Project manager','text'],['notes','Notes','textarea']]},
@@ -1352,17 +1352,22 @@ function dflt(f) {
 }
 async function form(row, pre) {
   const m = M[S.view];
-  const ptype = {quotations: 'quotation', jobs: 'job', invoices: 'invoice', maintenance: 'maintenance'}[S.view];
+  // Projects work like maintenance: the form has the same items / labour / costs table, and saving creates (or updates) a linked Job with its own job number that carries those lines.
+  // A project that already has several jobs keeps its lines on each job, so the table is hidden for it.
+  const isProj = S.view === 'projects' && (!row || pj(row).length <= 1);
+  const ptype = isProj ? 'job' : {quotations: 'quotation', jobs: 'job', invoices: 'invoice', maintenance: 'maintenance'}[S.view];
+  const tj = isProj && row ? (pj(row)[0] || null) : null, lid = isProj ? (tj && tj.id) : row && row.id;
   let existing = (pre && pre.items) || [], supPrice = 0;
-  if (ptype && row) {
-    const [li, su] = await Promise.all([sb.from('line_items').select('*').eq('parent_type', ptype).eq('parent_id', row.id).order('sort'),
-      ptype === 'job' ? sb.from('supplies').select('total_price').eq('job_id', row.id).is('deleted_at', null) : Promise.resolve({data: []})]);
+  if (ptype && row && lid) {
+    const [li, su] = await Promise.all([sb.from('line_items').select('*').eq('parent_type', ptype).eq('parent_id', lid).order('sort'),
+      ptype === 'job' ? sb.from('supplies').select('total_price').eq('job_id', lid).is('deleted_at', null) : Promise.resolve({data: []})]);
     existing = li.data || []; supPrice = (su.data || []).reduce((a, x) => a + (+x.total_price || 0), 0);
   }
   const nm = n => $('#df [name=' + n + ']');
   $('#dlg').style.width = ''; $('#df').innerHTML = `<h2>${row ? 'Edit' : 'Add'} ${m.one}</h2>` + m.f.map(f => input(f, row ? row[f[0]] : pre && pre[f[0]] !== undefined ? pre[f[0]] : dflt(f))).join('')
     + `<div class="foot"><button type="button" class="btn g" id="cx">Cancel</button><button class="btn">Save ${m.one}</button></div>`;
   $('#cx').onclick = () => $('#dlg').close();
+  if (S.view === 'projects') { const sf = nm('site'); if (sf) { if (isProj) { if (tj && tj.site) sf.value = tj.site; } else sf.closest('.fld').style.display = 'none'; } }
   if (['jobs','quotations','projects','maintenance'].includes(S.view)) {
     const vk = S.view === 'quotations' ? 'amount' : 'value', box = document.createElement('div');
     box.className = 'full card'; box.style.cssText = 'padding:12px 16px;display:flex;gap:20px;flex-wrap:wrap;font-weight:600';
@@ -1397,7 +1402,7 @@ async function form(row, pre) {
     };
     ed = itemsEditor(existing, onEd, ptype === 'invoice' ? KINDS.filter(k => k !== 'Expense') : KINDS);
     const dsc = nm('description'), anchor = (dsc || nm('notes')).closest('.fld');
-    if (ptype === 'maintenance') nm('value').closest('.fld').before(ed.el);   // line table sits above the value / cost fields
+    if (ptype === 'maintenance' || isProj) nm('value').closest('.fld').before(ed.el);   // line table sits above the value / cost fields
     else if (dsc) anchor.after(ed.el); else anchor.before(ed.el);
     ['discount', 'tax_rate'].forEach(n => { const e = nm(n); if (e) e.addEventListener('input', () => ed.update()); });
     ed.update();
@@ -1425,12 +1430,27 @@ async function form(row, pre) {
     const jb = S.view === 'invoices' ? S.jobs.find(x => x.id === o.job_id) : null;
     if (S.view === 'invoices') { if (jb) o.customer_id = jb.customer_id; else if (preCust) o.customer_id = preCust; else return toast('Select a job'); }
     if (S.view === 'jobs' && o.job_type !== 'Maintenance') o.maintenance_id = null;
+    const projSite = S.view === 'projects' ? o.site : null; if (S.view === 'projects') delete o.site;   // the site belongs to the project's job
+    const projLines = isProj && ed ? ed.read() : [];
+    if (isProj && projLines.length) { o.value = 0; o.labour_cost = 0; o.material_cost = 0; o.transport_cost = 0; o.other_cost = 0; }   // the job carries the money, so the project must not count it twice
     const save = () => row ? sb.from(S.view).update(o).eq('id', row.id) : sb.from(S.view).insert(o).select('id').single();
     let {data: saved, error} = await save();
     if (error && S.view === 'jobs' && /job_type|maintenance_id/.test(error.message)) { delete o.job_type; delete o.maintenance_id; ({data: saved, error} = await save()); if (!error) toast('Saved without job type or maintenance link. Run SQL 006 and 007 in Supabase.'); }
     if (error) return toast('Save failed: ' + error.message);
-    if (ed) {
-      const pid = row ? row.id : saved.id;
+    let pid = row ? row.id : (saved && saved.id), newJob = null;
+    if (isProj) {
+      pid = tj ? tj.id : null;
+      const pr = row ? row.id : saved.id;
+      if (tj) { await sb.from('jobs').update({customer_id: o.customer_id, site: projSite}).eq('id', tj.id); }
+      else if (!row || projLines.length) {
+        const jo = {project_id: pr, customer_id: o.customer_id, title: o.name, description: o.description, site: projSite, status: S.statuses[0], priority: o.priority || 'Normal', received_date: o.received_date || today(), target_date: o.target_date, job_type: 'Direct', notes: o.notes};
+        let r2 = await sb.from('jobs').insert(jo).select('id,job_no').single();
+        if (r2.error && /job_type/.test(r2.error.message)) { delete jo.job_type; r2 = await sb.from('jobs').insert(jo).select('id,job_no').single(); }
+        if (r2.error) return toast('Project saved, but the job was not created: ' + r2.error.message);
+        pid = r2.data.id; newJob = r2.data.job_no;
+      }
+    }
+    if (ed && pid) {
       const raw = ed.read(), keepOrder = raw.some(r => r.kind === 'Location'), rs = raw.sort((a, b) => (keepOrder ? 0 : krank(a.kind) - krank(b.kind)) || a.sort - b.sort).map((r, i) => ({...r, sort: i}));   // location headings keep the order the user set
       // Use the workflow RPC to preserve line IDs and synchronize quotation materials to Item Supply.
       const {error: e2} = await sb.rpc('save_line_items', {p_type: ptype, p_id: pid, p_items: rs});
@@ -1438,7 +1458,7 @@ async function form(row, pre) {
     }
     if (o.site) await saveSite(o.site, true);
     const qmsg = S.view === 'jobs' && o.job_type === 'Quotation' && !(row && row.quotation_id);
-    $('#dlg').close(); toast(qmsg ? 'Job saved. A draft quotation was added to the Quotations tab.' : row ? 'Saved' : 'Created');
+    $('#dlg').close(); toast(qmsg ? 'Job saved. A draft quotation was added to the Quotations tab.' : newJob ? 'Project saved. Job ' + pad('J-', newJob) + ' was created for it.' : row ? 'Saved' : 'Created');
     if (S.view === 'invoices' && o.amount > 0 && o.paid >= o.amount) confetti();
     await reload();
     list();
