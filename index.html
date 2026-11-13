@@ -1281,7 +1281,7 @@ async function printDoc(type, id) {
   const gm = (() => {
     if (!hasItems) return null;
     const ord = {Labour: 0, Material: 1, Other: 2, Transport: 3}, locs = [];
-    const task = (L, name, ex) => { let T = !ex && L.tasks.find(x => x.name === name && !x.ex); if (!T) { T = {name, rows: [], ex: !!ex, t: mtAll.find(t => name === t.title + (t.asset ? ' (' + t.asset + ')' : '') || name === t.title || (name || '').startsWith(t.title))}; L.tasks.push(T); } return T; };
+    const task = (L, name, ex) => { let T = !ex && L.tasks.find(x => x.name === name && !x.ex); if (!T) { T = {name, rows: [], ex: !!ex, }; L.tasks.push(T); } return T; };
     if (hasLoc) {
       let cur = null, tk = null;
       const need = () => { if (!cur) { cur = {name: '', tasks: []}; locs.push(cur); } return cur; };
@@ -1309,7 +1309,15 @@ async function printDoc(type, id) {
   // Top date of the printed invoice = INVOICE DATE (issue_date, the day the invoice was made). The work COMPLETION date is separate:
   // it comes from the job, or from the maintenance / project tasks listed on the invoice, and prints in the Job / Date column.
   const idate = String(d.issue_date || '').slice(0, 10) || today();
-  const compDates = !inv ? [] : (j ? [j.completion_date] : mtasks.map(t => mdone(t))).filter(Boolean).map(x => String(x).slice(0, 10)).sort();
+  const compDates = !inv ? [] : (j ? [j.completion_date] : mtasks.map(t => tdate(t))).filter(Boolean).map(x => String(x).slice(0, 10)).sort();
+  const tdate = t => String((t && (t.completion_date || mdone(t))) || '').slice(0, 10);
+  const usedT = new Set(), tname = t => t.title + (t.asset ? ' (' + t.asset + ')' : '');
+  const pickT = (T, L) => { const pool = mtasks.length ? mtasks : mtAll, nm = (T.name || '').trim(), ln = ((L && L.name) || '').trim();
+    const ok = t => !usedT.has(t.id) && (nm === tname(t) || nm === t.title);
+    let t = pool.find(x => ok(x) && (x.site || '').trim() === ln) || pool.find(ok);
+    if (!t) { const r = T.rows.map(x => pool.find(y => !usedT.has(y.id) && (x.description || '').startsWith(y.title))).find(Boolean); t = r || null; }
+    if (!t && !nm) { const c = pool.filter(y => !usedT.has(y.id) && (y.site || '').trim() === ln); if (c.length === 1) t = c[0]; }
+    if (t) usedT.add(t.id); return t; };
   const cdate = !inv ? date : (compDates.length ? compDates[compDates.length - 1] : '');
   const loc = (inv ? (j && j.site) || '' : d.site) || '', jdate = inv ? cdate : '', jnum = inv && j ? pad('J-', j.job_no) : '';
   const tel = S.phone || '+9475 4276105 / +9470 6651029 (Whatsapp)', mail = S.email || 'connectprotechnologies11@gmail.com';
@@ -1327,7 +1335,7 @@ async function printDoc(type, id) {
     gm.forEach((L, li) => {
       rows += `<tr class="gb"><td colspan="3"><span class="nb">${String(li + 1).padStart(2, '0')}</span>${esc(L.name || 'General')}</td><td class="r">${f2(L.tasks.reduce((a, T) => a + T.rows.reduce((b, x) => b + x.quantity * x.unit_price, 0), 0))}</td></tr>`;
       L.tasks.forEach(T => {
-        if (T.name) rows += `<tr class="tk"><td colspan="4">${esc(T.name)}${inv && (T.t ? mdone(T.t) : cdate) ? `<span style="float:right;font-weight:400;font-style:italic;color:#5b6b7d">Completed : ${esc(shortDate(T.t ? mdone(T.t) : cdate))}</span>` : ''}</td></tr>`;
+        { const td = inv ? tdate(pickT(T, L)) : ''; if (T.name || td) rows += `<tr class="tk"><td colspan="4">${esc(T.name)}${td ? `<span style="float:right;font-weight:400;font-style:italic;color:#5b6b7d">Completed : ${esc(shortDate(td))}</span>` : ''}</td></tr>`; }
         let prev = '', i = 0;
         T.rows.forEach(x => { const cat = catL[x.kind] || 'Charges'; if (cat !== prev) { rows += `<tr class="sb"><td colspan="4">${cat}</td></tr>`; prev = cat; i = 0; }
           rows += `<tr class="${i++ % 2 ? 'w' : 'g'}"><td>${br(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; });
@@ -1336,7 +1344,7 @@ async function printDoc(type, id) {
   }
   if (!gm) groups.forEach((g, gi) => {
     if (hasItems) { rows += `<tr class="gb">${per ? '<td class="side"></td><td class="side"></td><td class="side"></td>' : first ? side : ''}<td colspan="3"><span class="nb">${String(gi + 1).padStart(2, '0')}</span>${gl[g.k]}</td><td class="r">${f2(g.rows.reduce((a, x) => a + x.quantity * x.unit_price, 0))}</td></tr>`; first = false; }
-    g.rows.forEach((x, i) => { rows += `<tr class="${i % 2 ? 'w' : 'g'}">${per ? `<td class="side"></td><td class="side" style="vertical-align:middle">${br(siteOf(x))}</td><td class="side" style="vertical-align:middle">${esc(shortDate((() => { const t = mtasks.find(t => (x.description || '').startsWith(t.title)); return (t && mdone(t)) || jdate; })()))}</td>` : first ? side : ''}<td>${br(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; first = false; });
+    g.rows.forEach((x, i) => { rows += `<tr class="${i % 2 ? 'w' : 'g'}">${per ? `<td class="side"></td><td class="side" style="vertical-align:middle">${br(siteOf(x))}</td><td class="side" style="vertical-align:middle">${esc(shortDate((() => { const t = mtasks.find(t => (x.description || '').startsWith(t.title)); return (t && tdate(t)) || jdate; })()))}</td>` : first ? side : ''}<td>${br(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; first = false; });
   });
   const tr = (label, val) => `<tr class="sm"><td colspan="${gm ? 3 : 6}" class="r">${label}</td><td class="r">${val}</td></tr>`;
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(no)}</title><style>
@@ -1355,7 +1363,7 @@ tr.tk td{background:#fff;color:#073763;font-weight:700;font-size:11.5px;padding:
 <body><table class="lay"><thead><tr><td><img class="hd" src="${S.hdr || DEFAULT_HDR}" alt=""></td></tr></thead>
 <tfoot><tr><td><div class="ft"><span>Tel : ${esc(tel)}</span><span>E mail : ${esc(mail)}</span></div></td></tr></tfoot>
 <tbody><tr><td>
-<div class="top"><div><div class="tt">${inv ? 'Invoice' : 'Quotation'}</div><div class="acc"></div></div><div class="meta"><div><span>${inv ? 'Invoice' : 'Quotation'} Number :</span><b>${esc(no)}</b></div><div><span>${inv ? 'Invoice Date' : 'Date'} :</span><b>${longDate(inv ? idate : cdate)}</b></div>${inv && cdate ? `<div><span>Completion Date :</span><b>${longDate(cdate)}</b></div>` : ''}</div></div>
+<div class="top"><div><div class="tt">${inv ? 'Invoice' : 'Quotation'}</div><div class="acc"></div></div><div class="meta"><div><span>${inv ? 'Invoice' : 'Quotation'} Number :</span><b>${esc(no)}</b></div><div><span>${inv ? 'Invoice Date' : 'Date'} :</span><b>${longDate(inv ? idate : cdate)}</b></div></div></div>
 <div class="bar">Customer Detail</div><div class="cd"><div><b>Company/Customer Name :</b> ${esc(c.name || '')}</div><div><b>Address :</b> ${esc((c.address || '').replace(/\n/g, ', '))}</div><div><b>Contact Person :</b> ${esc(c.contact_person || '')}${c.phone ? ' &nbsp;(' + esc(c.phone) + ')' : ''}</div><div><b>E mail :</b> ${esc(c.email || '')}</div></div>
 <table class="it">${gm ? '<thead><tr><th>W/Performed</th><th style="width:9%">Qty</th><th style="width:16%">Charge (LKR)</th><th style="width:16%">Total (LKR)</th></tr></thead>' : '<thead><tr><th style="width:13%">Job Number</th><th style="width:15%">Location</th><th style="width:11%">Date</th><th>W/Performed</th><th style="width:7%">Qty</th><th style="width:13%">Charge (LKR)</th><th style="width:13%">Total (LKR)</th></tr></thead>'}<tbody>${rows}
 ${disc || Math.abs(tax) > 0.005 ? tr('Subtotal', f2(sub)) : ''}${disc ? tr('Discount', '- ' + f2(disc)) : ''}${Math.abs(tax) > 0.005 ? tr('Tax (' + (+d.tax_rate || 0) + '%)', f2(tax)) : ''}
