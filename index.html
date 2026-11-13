@@ -227,7 +227,8 @@ function toast(t) {
   e.innerHTML = ic(bad ? 'x' : 'check', 16) + '<span>' + esc(t) + '</span>'; e.style.background = bad ? '#b91c1c' : '';
   e.classList.remove('hide'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.add('hide'), 3000);
 }
-const addDays = n => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
+const isoLocal = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');   // YYYY-MM-DD in the local time zone
+const addDays = n => isoLocal(new Date(Date.now() + n * 864e5));
 function countUp() {
   document.querySelectorAll('[data-n]').forEach(e => { const n = +e.dataset.n, mo = e.dataset.f === 'm', t0 = performance.now();
     const step = t => { const p = Math.min(1, (t - t0) / 900), v = n * (1 - Math.pow(1 - p, 3)); e.textContent = mo ? money(v) : Math.round(v).toLocaleString(); if (p < 1) requestAnimationFrame(step); };
@@ -267,7 +268,7 @@ const cname = id => (S.cust.find(c => c.id === id) || {}).name || '';
 const pad = (p, n) => p + String(n).padStart(4, '0');
 const hue = s => { const i = Math.max(0, S.statuses.indexOf(s)); return Math.round(215 - i * (75 / Math.max(1, S.statuses.length - 1))); };
 const pill = s => `<span class="pill" style="background:hsl(${hue(s)} 85% 91%);color:hsl(${hue(s)} 65% 24%)">${esc(s)}</span>`;
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => isoLocal(new Date());
 function invStatus(r) {
   if (+r.paid >= +r.amount && +r.amount > 0) return 'Paid';
   if (+r.paid > 0) return 'Partial';
@@ -1254,10 +1255,10 @@ async function payDialog(id) {
     if (e3) return toast('Delete failed: ' + e3.message); refresh();
   });
 }
-const longDate = d => { if (!d) return ''; const x = new Date(String(d).slice(0, 10) + 'T12:00:00'), n = x.getDate(), sf = n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'; return n + sf + ' Of ' + x.toLocaleString('en', {month: 'long'}) + ' ' + x.getFullYear(); };
+const longDate = d => { if (!d) return ''; const x = String(d).slice(0, 10).split('-'); return x.length === 3 ? x[0] + '-' + x[1] + '-' + x[2] : String(d); };   // Year-Month-Day
 const f2 = n => Number(n || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const mdone = r => [r.completion_date, r.last_done, ...(S.jobs || []).filter(j => j.maintenance_id === r.id && j.completion_date && ['Completed','Invoiced','Paid'].includes(j.status)).map(j => j.completion_date)].filter(Boolean).map(x => String(x).slice(0, 10)).sort().pop() || '';
-const shortDate = d => { if (!d) return ''; const x = String(d).slice(0, 10).split('-'); return x.length === 3 ? x[2] + '/' + x[1] + '/' + x[0] : String(d); };
+const shortDate = d => { if (!d) return ''; const x = String(d).slice(0, 10).split('-'); return x.length === 3 ? x[0] + '-' + x[1] + '-' + x[2] : String(d); };   // Year-Month-Day
 async function printDoc(type, id) {
   const d = S.rows.find(x => x.id === id); if (!d) return;
   const [it, pay] = await Promise.all([sb.from('line_items').select('*').eq('parent_type', type).eq('parent_id', id).order('sort'),
@@ -1369,7 +1370,7 @@ ${inv && paid > 0 ? tr('Received', f2(paid)) + tr('Balance due', f2(total - paid
 async function maintDone(id) {
   const r = S.rows.find(x => x.id === id), n = {Weekly: 7, Monthly: 1, Quarterly: 3, 'Half-yearly': 6, Yearly: 12}[r.frequency], o = {last_done: today()};
   if (!n) o.status = 'Completed';
-  else { const d = new Date(); r.frequency === 'Weekly' ? d.setDate(d.getDate() + 7) : d.setMonth(d.getMonth() + n); o.next_due = d.toISOString().slice(0, 10); o.status = 'Assigned'; }
+  else { const d = new Date(); r.frequency === 'Weekly' ? d.setDate(d.getDate() + 7) : d.setMonth(d.getMonth() + n); o.next_due = isoLocal(d); o.status = 'Assigned'; }
   // the job(s) created from this task are completed too, so the Jobs tab matches (done first: the job trigger must not overwrite the task's next-due date)
   const open = (S.jobs || []).filter(j => j.maintenance_id === id && !['Completed', 'Invoiced', 'Paid', 'Cancelled'].includes(j.status));
   if (open.length) { const {error: je} = await sb.from('jobs').update({status: 'Completed', completion_date: today()}).in('id', open.map(j => j.id)); if (je) return toast('Job not completed: ' + je.message); }
