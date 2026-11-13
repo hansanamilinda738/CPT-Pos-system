@@ -1308,7 +1308,7 @@ async function printDoc(type, id) {
   const tkName = t => t.title + (t.asset ? ' (' + t.asset + ')' : '');
   const doneOfTask = nm => { const t = mtAll.find(t => nm === tkName(t) || nm === t.title); return t ? mdone(t) : ''; };
   const dateOfLine = x => { const t = mtasks.find(t => (x.description || '').startsWith(t.title)); return t ? mdone(t) : ''; };
-  const cdate = !inv ? date : (j && j.completion_date ? String(j.completion_date).slice(0, 10) : '')
+  const cdate = !inv ? date : (d.issue_date ? String(d.issue_date).slice(0, 10) : '') || (j && j.completion_date ? String(j.completion_date).slice(0, 10) : '')
     || [...(gm ? gm.flatMap(L => L.tasks.map(T => doneOfTask(T.name))) : []), ...mtasks.map(mdone), ...(j && j.maintenance_id ? [mdone(S.maint.find(x => x.id === j.maintenance_id) || {})] : [])].filter(Boolean).sort().pop() || d.issue_date || '';
   const loc = (inv ? (j && j.site) || '' : d.site) || '', jdate = inv ? cdate : '', jnum = inv && j ? pad('J-', j.job_no) : '';
   const tel = S.phone || '+9475 4276105 / +9470 6651029 (Whatsapp)', mail = S.email || 'connectprotechnologies11@gmail.com';
@@ -1414,7 +1414,7 @@ async function maintDoc(ids, what) {
   const {data: lis} = await sb.from('line_items').select('*').eq('parent_type', 'maintenance').in('parent_id', ts.map(t => t.id)).order('sort');
   const items = buildMaintItems(ts, lis), notes = 'Maintenance: ' + ts.map(t => pad('M-', t.ref_no)).join(', ');
   S.msel = {}; go(what === 'invoice' ? 'invoices' : 'quotations');
-  form(null, what === 'invoice' ? {customer_id: custs[0], items, notes} : {customer_id: custs[0], title: 'Maintenance quotation', items, notes});
+  form(null, what === 'invoice' ? {customer_id: custs[0], items, notes, issue_date: ts.map(mdone).filter(Boolean).sort().pop() || today()} : {customer_id: custs[0], title: 'Maintenance quotation', items, notes});
 }
 const maintInvoice = ids => maintDoc(ids, 'invoice'), maintQuotation = ids => maintDoc(ids, 'quotation');
 async function completeJob(id) {
@@ -1526,6 +1526,7 @@ async function form(row, pre) {
   if (S.view === 'invoices' && preCust) { const jsel = nm('job_id'); jsel.required = false; jsel.options[0].textContent = 'No job (maintenance invoice for ' + (cname(preCust) || 'customer') + ')'; }
   if (S.view === 'invoices') {
     const js = nm('job_id');
+    if (!row && js.value) { const j0 = S.jobs.find(x => x.id === js.value), d0 = nm('issue_date'); if (j0 && j0.completion_date && d0 && !(pre && pre.issue_date)) d0.value = String(j0.completion_date).slice(0, 10); }
     js.onchange = async () => { const jx = S.jobs.find(x => x.id === js.value), idt = nm('issue_date'); if (jx && jx.completion_date && idt) idt.value = String(jx.completion_date).slice(0, 10); if (!row && ed.isEmpty() && js.value) ed.setRows(await jobInvoiceItems(js.value)); };
     const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'btn g s'; pb.style.marginTop = '6px';
     pb.textContent = 'Pull all charges from the job (line by line)';
