@@ -354,7 +354,7 @@ const M = {
   invoices: {label: 'Invoices', one: 'invoice', flt: ['status','cust','cat'], dt: 'issue_date', vk: 'amount', no: ['Invoice No','invoice_no','INV-'],
     cols: [['invoice_no','Invoice',r => esc(inn(r))],['job_id','Job',r => esc(invJobs(r))],['customer_id','Customer',r => esc(cname(r.customer_id))],
       ['cat','Category',r => { const c = CATS.find(x => x[0] === invCat(r)); return `<span class="pill" style="background:${c[2]}22;color:${c[2]}">${c[1]}</span>`; }],['issue_date','Invoice date'],['amount','Invoice value',r => money(r.amount),1],
-      ['paid','Received',r => money(r.paid),1],['s','Status',r => {const s = invStatus(r); return `<span class="pill ${s}">${s}</span>`}]],
+      ['paid','Received',r => money(r.paid),1],['bal','Balance',r => money(Math.max(0, (+r.amount || 0) - (+r.paid || 0))),1],['s','Status',r => {const s = invStatus(r); return `<span class="pill ${s}">${s}</span>`}]],
     f: [['job_id','Job (job number)','job',1],['issue_date','Invoice date','date'],
       ['discount','Discount (LKR)','number'],['tax_rate','Tax / VAT (%)','number'],['amount','Invoice total (LKR)','number'],['notes','Notes','textarea']]},
   projects: {label: 'Projects', one: 'project', flt: ['status','cust','priority','inv'], dt: 'received_date', vk: 'value', no: ['Project No','project_no','P-'], get sts() { return S.statuses; },
@@ -1238,13 +1238,16 @@ async function payDialog(id) {
   const {data, error} = await sb.from('payments').select('*').eq('invoice_id', id).is('deleted_at', null).order('pay_date');
   if (error) return toast('Payments need SQL 010: ' + error.message);
   const pays = data || [], paid = pays.reduce((a, p) => a + (+p.amount || 0), 0), bal = (+inv.amount || 0) - paid;
-  showCard(`<h2>${esc(inn(inv))} payments</h2>` + kv([['Invoice total', money(inv.amount)], ['Received', money(paid)], ['Balance', money(bal)]])
+  showCard(`<h2>${esc(inn(inv))} payments</h2>` + kv([['Invoice total', money(inv.amount)], ['Received so far', money(paid) + ' (' + pays.length + ' payment' + (pays.length === 1 ? '' : 's') + ')'], ['Balance to collect', money(Math.max(0, bal))]])
+    + `<div class="full" style="height:10px;background:#e2e8f0;border-radius:6px;overflow:hidden"><div style="height:100%;width:${Math.min(100, (+inv.amount > 0 ? paid / inv.amount * 100 : 0)).toFixed(1)}%;background:${bal <= 0.005 ? '#10b981' : '#f59e0b'}"></div></div>`
     + tbl(['Date','Method','Reference','Amount',''], pays.map(p => [esc(p.pay_date), esc(p.method || ''), esc(p.reference || ''), money(p.amount), `<button type="button" class="btn g s" data-dp="${p.id}" aria-label="Delete payment">${ic('trash', 14)}</button>`]))
-    + `<h3 class="full">Record a payment</h3><div class="fld"><label>Date</label><input type="date" id="pd1" value="${today()}"></div><div class="fld"><label>Amount (${esc(S.cur)})</label><input type="number" id="pa1" step="0.01" min="0" value="${bal > 0 ? bal.toFixed(2) : ''}"></div>`
+    + `<h3 class="full">Record a payment</h3><div class="fld"><label>Date</label><input type="date" id="pd1" value="${today()}"></div><div class="fld"><label>Amount (${esc(S.cur)})</label><input type="number" id="pa1" step="0.01" min="0" placeholder="e.g. ${bal > 0 ? (bal / 2).toFixed(2) : '0.00'}"><div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn g s" data-q="1">Full balance</button><button type="button" class="btn g s" data-q="0.5">Half of balance</button><button type="button" class="btn g s" data-q="0">Clear</button></div></div>`
     + `<div class="fld"><label>Method</label><select id="pm1">${['Cash','Bank transfer','Cheque','Card','Online'].map(x => `<option>${x}</option>`).join('')}</select></div><div class="fld"><label>Reference / note</label><input id="pr1"></div><div class="full"><button type="button" class="btn" id="pbtn">${ic('check', 16)} Record payment</button></div>`);
   const refresh = async () => { await reload(); await list(); payDialog(id); };
+  document.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { const q = +b.dataset.q; $('#pa1').value = q ? (Math.max(0, bal) * q).toFixed(2) : ''; });
   $('#pbtn').onclick = async () => {
     const a = +$('#pa1').value; if (!(a > 0)) return toast('Enter the amount received');
+    if (a > bal + 0.005 && !confirm('This is more than the balance (' + f2(Math.max(0, bal)) + '). Record it anyway?')) return;
     const {error: e2} = await sb.from('payments').insert({invoice_id: id, pay_date: $('#pd1').value || today(), amount: a, method: $('#pm1').value, reference: $('#pr1').value.trim() || null});
     if (e2) return toast('Save failed: ' + e2.message);
     if (a >= bal - 0.005) confetti(); toast('Payment recorded'); refresh();
@@ -1373,7 +1376,7 @@ tr.tk td{background:#fff;color:#073763;font-weight:700;font-size:11.5px;padding:
 <table class="it">${gm ? '<thead><tr><th>W/Performed</th><th style="width:9%">Qty</th><th style="width:16%">Charge (LKR)</th><th style="width:16%">Total (LKR)</th></tr></thead>' : '<thead><tr><th style="width:13%">Job Number</th><th style="width:15%">Location</th><th style="width:11%">Date</th><th>W/Performed</th><th style="width:7%">Qty</th><th style="width:13%">Charge (LKR)</th><th style="width:13%">Total (LKR)</th></tr></thead>'}<tbody>${rows}
 ${disc || Math.abs(tax) > 0.005 ? tr('Subtotal', f2(sub)) : ''}${disc ? tr('Discount', '- ' + f2(disc)) : ''}${Math.abs(tax) > 0.005 ? tr('Tax (' + (+d.tax_rate || 0) + '%)', f2(tax)) : ''}
 <tr class="tot">${gm ? '<td colspan="2" style="border-right:0"></td><td style="border-left:0">Total</td>' : '<td colspan="3" style="border-right:0"></td><td colspan="3" style="border-left:0">Total</td>'}<td class="r">${f2(total)}</td></tr>
-${inv && paid > 0 ? tr('Received', f2(paid)) + tr('Balance due', f2(total - paid)) : ''}</tbody></table>
+${inv && paid > 0 ? (pay.data || []).map(p => tr('Payment ' + longDate(p.pay_date) + (p.method ? ' (' + esc(p.method) + ')' : ''), f2(p.amount))).join('') + tr('Total received', f2(paid)) + tr('Balance due', f2(Math.max(0, total - paid))) : ''}</tbody></table>
 <div class="rm"><b>Remark :</b>${br(remark)}</div>${inv && S.bank ? `<div class="bk"><b>Bank details :</b><br>${br(S.bank)}</div>` : ''}
 <div class="sg"><div><b>Prepared By :</b><div class="sig">${esc(pn)}</div><div class="s2">${esc(pt)}</div></div><div><b>Authorized By :</b><div class="sig">${esc(an)}</div><div class="s2">${esc(at)}</div></div></div>
 </td></tr></tbody></table></body></html>`;
