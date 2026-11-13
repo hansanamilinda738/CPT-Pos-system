@@ -1338,19 +1338,21 @@ async function printDoc(type, id) {
   });
   const tr = (label, val) => `<tr class="sm"><td colspan="${gm ? 3 : 6}" class="r">${label}</td><td class="r">${val}</td></tr>`;
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(no)}</title><style>
-@page{size:A4;margin:0}*{box-sizing:border-box}body{margin:0;font:12px/1.45 Calibri,Arial,Helvetica,sans-serif;color:#1a1a1a;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.pg{width:210mm;min-height:296mm;padding:6mm 10mm 0;display:flex;flex-direction:column;margin:0 auto}.hd{width:100%;display:block}
+@page{size:A4;margin:25.4mm;@bottom-right{content:'Page ' counter(page) ' of ' counter(pages);font:9px Arial,sans-serif;color:#555}}*{box-sizing:border-box}body{margin:0;font:12px/1.45 Calibri,Arial,Helvetica,sans-serif;color:#1a1a1a;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+table.lay{width:100%;border-collapse:collapse;table-layout:fixed;height:calc(297mm - 50.8mm - 4mm)}table.lay>thead>tr>td,table.lay>tfoot>tr>td,table.lay>tbody>tr>td{padding:0;border:0}table.lay>tbody>tr>td{vertical-align:top}table.lay>thead>tr>td{padding-bottom:4px}table.lay>tfoot>tr>td{padding-top:10px;vertical-align:bottom}table.lay>thead,table.lay>tfoot{display:table-header-group}table.lay>tfoot{display:table-footer-group}.hd{width:100%;display:block}tr{page-break-inside:avoid;break-inside:avoid}.rm,.bk,.sg,.cd,.top{page-break-inside:avoid;break-inside:avoid}
 .top{display:flex;justify-content:space-between;align-items:center;margin:10px 0 9px}.tt{font-size:32px;font-weight:800;font-style:italic;color:#0b3d75;line-height:1}.acc{width:70px;height:4px;background:#0ea5e9;margin-top:8px;border-radius:2px}
 .meta{min-width:285px;background:#eef3f9;border-left:5px solid #073763;padding:8px 14px}.meta div{display:flex;justify-content:space-between;gap:20px;line-height:1.85;font-style:italic}.meta b{color:#073763}
 .bar{background:#073763;color:#fff;font-style:italic;font-weight:700;padding:4px 8px}.cd{display:grid;grid-template-columns:1fr 1fr;gap:1px 26px;padding:6px 2px 9px;font-style:italic;line-height:1.55}.cd b{font-style:normal;color:#073763}
-table.it{width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:11px}table.it th{background:#073763;color:#fff;padding:5px 6px;font-weight:700;text-align:center;border:1px solid #073763}
-table.it td{padding:3px 7px;border:1px solid #8a97a6;vertical-align:middle}tr.g td{background:#f0f0f0}tr.w td{background:#fff}.c{text-align:center}.r{text-align:right}td.side{background:#fff!important;vertical-align:top;text-align:center;font-weight:700;color:#073763}
+table.it{width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:10.5px;overflow-wrap:anywhere}table.it th{background:#073763;color:#fff;padding:5px 6px;font-weight:700;text-align:center;border:1px solid #073763}
+table.it td{padding:3px 5px;border:1px solid #8a97a6;vertical-align:middle}tr.g td{background:#f0f0f0}tr.w td{background:#fff}.c{text-align:center}.r{text-align:right}td.side{background:#fff!important;vertical-align:top;text-align:center;font-weight:700;color:#073763}
 tr.gb td{background:#dbe6f3;color:#073763;font-weight:700;font-style:italic;border-color:#8a97a6}.nb{display:inline-block;background:#073763;color:#fff;border-radius:3px;padding:0 7px;margin-right:9px;font-style:normal;font-size:10px;line-height:16px}
 tr.tk td{background:#fff;color:#073763;font-weight:700;font-size:11.5px;padding:5px 7px 2px;border-bottom:0}tr.sb td{background:#fff;color:#5b6b7d;font-style:italic;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px}tr.sm td{border:0;font-style:italic;font-weight:700;padding-top:3px}tr.tot td{background:#073763;color:#fff;font-weight:700;font-style:italic;border-color:#073763;font-size:13px;padding:6px 8px}tr.tot td.r{font-style:normal}
 .rm{margin-top:16px;border-left:4px solid #0ea5e9;background:#f6f9fc;padding:8px 12px;font-style:italic}.rm b{margin-right:10px;color:#073763}.bk{margin-top:8px;font-style:italic;padding-left:16px}.bk b{color:#073763}
 .sg{display:flex;justify-content:space-between;margin-top:24px;font-style:italic}.sg b{display:block;margin-bottom:12px;color:#073763}.sig{font-family:'Segoe Script','Brush Script MT','Lucida Handwriting',cursive;font-size:17px;font-style:italic;color:#0b3d75}
-.s2{text-align:center;font-style:normal;color:#555}.ft{margin:auto -10mm 0;background:#073763;color:#fff;font-style:italic;font-weight:700;padding:10px 12mm;margin-top:18px;display:flex;justify-content:space-between;gap:16px}</style></head>
-<body><div class="pg"><img class="hd" src="${S.hdr || DEFAULT_HDR}" alt="">
+.s2{text-align:center;font-style:normal;color:#555}.ft{background:#073763;color:#fff;font-style:italic;font-weight:700;padding:8px 12px;display:flex;justify-content:space-between;gap:16px;font-size:11px}</style></head>
+<body><table class="lay"><thead><tr><td><img class="hd" src="${S.hdr || DEFAULT_HDR}" alt=""></td></tr></thead>
+<tfoot><tr><td><div class="ft"><span>Tel : ${esc(tel)}</span><span>E mail : ${esc(mail)}</span></div></td></tr></tfoot>
+<tbody><tr><td>
 <div class="top"><div><div class="tt">${inv ? 'Invoice' : 'Quotation'}</div><div class="acc"></div></div><div class="meta"><div><span>${inv ? 'Invoice' : 'Quotation'} Number :</span><b>${esc(no)}</b></div><div><span>Date :</span><b>${longDate(cdate)}</b></div><div><span>${inv ? 'Due Date' : 'Valid Date'} :</span><b>${longDate(second)}</b></div></div></div>
 <div class="bar">Customer Detail</div><div class="cd"><div><b>Company/Customer Name :</b> ${esc(c.name || '')}</div><div><b>Address :</b> ${esc((c.address || '').replace(/\n/g, ', '))}</div><div><b>Contact Person :</b> ${esc(c.contact_person || '')}${c.phone ? ' &nbsp;(' + esc(c.phone) + ')' : ''}</div><div><b>E mail :</b> ${esc(c.email || '')}</div></div>
 <table class="it">${gm ? '<thead><tr><th>W/Performed</th><th style="width:9%">Qty</th><th style="width:16%">Charge (LKR)</th><th style="width:16%">Total (LKR)</th></tr></thead>' : '<thead><tr><th style="width:13%">Job Number</th><th style="width:15%">Location</th><th style="width:11%">Date</th><th>W/Performed</th><th style="width:7%">Qty</th><th style="width:13%">Charge (LKR)</th><th style="width:13%">Total (LKR)</th></tr></thead>'}<tbody>${rows}
@@ -1359,7 +1361,7 @@ ${disc || Math.abs(tax) > 0.005 ? tr('Subtotal', f2(sub)) : ''}${disc ? tr('Disc
 ${inv && paid > 0 ? tr('Received', f2(paid)) + tr('Balance due', f2(total - paid)) : ''}</tbody></table>
 <div class="rm"><b>Remark :</b>${br(remark)}</div>${inv && S.bank ? `<div class="bk"><b>Bank details :</b><br>${br(S.bank)}</div>` : ''}
 <div class="sg"><div><b>Prepared By :</b><div class="sig">${esc(pn)}</div><div class="s2">${esc(pt)}</div></div><div><b>Authorized By :</b><div class="sig">${esc(an)}</div><div class="s2">${esc(at)}</div></div></div>
-<div class="ft"><span>Tel : ${esc(tel)}</span><span>E mail : ${esc(mail)}</span></div></div></body></html>`;
+</td></tr></tbody></table></body></html>`;
   const w = window.open('', '_blank'); if (!w) return toast('Allow pop-ups for this site to print');
   w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500);
 }
