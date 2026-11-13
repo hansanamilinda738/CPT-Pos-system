@@ -341,37 +341,37 @@ const M = {
   quotations: {label: 'Quotations', one: 'quotation', flt: ['status','cust','site'], dt: 'quote_date', vk: 'amount', no: ['Quote No','quote_no','Q-'],
     cols: [['quote_no','Quote',r => esc(qn(r))],['title','Title'],['customer_id','Customer',r => esc(cname(r.customer_id))],
       ['status','Status',r => qpill(r.status)],['job_id','Job',r => esc(jno(r.job_id))],['amount','Quote value',r => money(r.amount),1],['est','Est. profit',r => profit(r.amount, jcost(r)),1]],
-    f: [['customer_id','Customer','cust'],['site','Site / location','text'],['title','Service / title','text',1],['description','Project details','textarea'],['quote_date','Quote date','date'],['valid_until','Valid until','date'],
+    f: [['customer_id','Customer','cust'],['site','Site / location','text'],['title','Service / title','text',1],['description','Project details','textarea'],['quote_date','Start date','date'],
       ['status','Status','select:Draft,Sent,Rejected'],...costF,['amount','Quotation total (LKR)','number'],['notes','Notes','textarea']]},
   jobs: {label: 'Jobs', one: 'job', flt: ['status','priority','cust','proj','site','inv'], dt: 'received_date', vk: 'value', no: ['Job No','job_no','J-'],
     cols: [['job_no','Job',r => pad('J-', r.job_no)],['site','Site / location',r => r.site ? `<b>${esc(r.site)}</b>` : '<span style="opacity:.5">No location</span>'],['title','Title'],['customer_id','Customer',r => esc(cname(r.customer_id))],
-      ['project_id','Project',r => esc(pname(r.project_id))],['job_type','Type'],['status','Status',r => pill(r.status)],['progress','Progress',r => `<div class="pgw"><div class="pgb"><i style="width:${+r.progress || 0}%"></i></div>${+r.progress || 0}%</div>`],['target_date','Target'],['value','Value',r => money(r.value),1],
+      ['project_id','Project',r => esc(pname(r.project_id))],['job_type','Type'],['status','Status',r => pill(r.status)],['progress','Progress',r => `<div class="pgw"><div class="pgb"><i style="width:${+r.progress || 0}%"></i></div>${+r.progress || 0}%</div>`],['received_date','Start date'],['completion_date','Completion date'],['value','Value',r => money(r.value),1],
       ['jinv','Invoice',r => jobInvPill(r)],['cost','Cost',r => money(jcost(r)),1],['profit','Profit',r => profit(r.value, jcost(r)),1]],
     f: [['customer_id','Customer','cust'],['site','Site / location','text'],['technician','Assigned technician(s)','text'],['project_id','Project','proj'],['title','Job title','text',1],['job_type','Job type','select:Direct,Quotation,Maintenance'],['maintenance_id','Maintenance task','maint'],['description','Description','textarea'],
       ['status','Status','status'],['progress','Progress (%)','number'],['priority','Priority','select:Low,Normal,High,Urgent'],
-      ['received_date','Received date','date'],['target_date','Target date','date'],['completion_date','Completion date','date'],
+      ['received_date','Start date','date'],['completion_date','Completion date','date'],
       ['value','Job value (LKR)','number'],...costF,['notes','Internal notes','textarea']]},
   invoices: {label: 'Invoices', one: 'invoice', flt: ['status','cust','cat'], dt: 'issue_date', vk: 'amount', no: ['Invoice No','invoice_no','INV-'],
     cols: [['invoice_no','Invoice',r => esc(inn(r))],['job_id','Job',r => esc(invJobs(r))],['customer_id','Customer',r => esc(cname(r.customer_id))],
-      ['cat','Category',r => { const c = CATS.find(x => x[0] === invCat(r)); return `<span class="pill" style="background:${c[2]}22;color:${c[2]}">${c[1]}</span>`; }],['issue_date','Issued'],['due_date','Due'],['amount','Invoice value',r => money(r.amount),1],
+      ['cat','Category',r => { const c = CATS.find(x => x[0] === invCat(r)); return `<span class="pill" style="background:${c[2]}22;color:${c[2]}">${c[1]}</span>`; }],['issue_date','Completion date'],['amount','Invoice value',r => money(r.amount),1],
       ['paid','Received',r => money(r.paid),1],['s','Status',r => {const s = invStatus(r); return `<span class="pill ${s}">${s}</span>`}]],
-    f: [['job_id','Job (job number)','job',1],['issue_date','Issue date','date'],['due_date','Due date','date'],
+    f: [['job_id','Job (job number)','job',1],['issue_date','Completion date','date'],
       ['discount','Discount (LKR)','number'],['tax_rate','Tax / VAT (%)','number'],['amount','Invoice total (LKR)','number'],['notes','Notes','textarea']]},
   projects: {label: 'Projects', one: 'project', flt: ['status','cust','priority','inv'], dt: 'received_date', vk: 'value', no: ['Project No','project_no','P-'], get sts() { return S.statuses; },
     cols: [['project_no','Project',r => pad('P-', r.project_no)],['name','Name'],['customer_id','Customer',r => esc(cname(r.customer_id))],['status','Status',r => pill(r.status)],['priority','Priority'],
-      ['progress','Progress',r => `<div class="pgw"><div class="pgb"><i style="width:${+r.progress || 0}%"></i></div>${+r.progress || 0}%</div>`],['jobs','Jobs',r => pj(r).length],['target_date','Target'],
+      ['progress','Progress',r => `<div class="pgw"><div class="pgb"><i style="width:${+r.progress || 0}%"></i></div>${+r.progress || 0}%</div>`],['jobs','Jobs',r => pj(r).length],['received_date','Start date'],['completion_date','Completion date'],
       ['value','Value',r => money(pval(r)),1],['pinv','Invoice',r => projInvPill(r)],['spent','Total cost',r => money(pcost(r)),1],['pprofit','Profit',r => profit(pval(r), pcost(r)),1]],
     f: [['customer_id','Customer','cust'],['site','Site / location','text'],['name','Project name','text',1],['description','Description','textarea'],['status','Status','status'],['priority','Priority','select:Low,Normal,High,Urgent'],
-      ['received_date','Received date','date'],['target_date','Target date','date'],['completion_date','Completion date','date'],['value','Project value (LKR)','number'],
+      ['received_date','Start date','date'],['completion_date','Completion date','date'],['value','Project value (LKR)','number'],
       ['labour_cost','Labour charge (LKR)','number'],['material_cost','Material cost (LKR)','number'],['transport_cost','Transport cost (LKR)','number'],['other_cost','Other expenses (LKR)','number'],
       ['budget','Budget (LKR)','number'],['manager','Project manager','text'],['notes','Notes','textarea']]},
-  maintenance: {label: 'Maintenance', one: 'maintenance task', flt: ['status','cust','priority','site','inv'], dt: 'next_due', vk: 'value', no: ['Ref No','ref_no','M-'], get sts() { return [...S.statuses, 'Due soon', 'Overdue']; },
+  maintenance: {label: 'Maintenance', one: 'maintenance task', flt: ['status','cust','priority','site','inv'], dt: 'received_date', vk: 'value', no: ['Ref No','ref_no','M-'], get sts() { return [...S.statuses, 'Due soon', 'Overdue']; },
     cols: [['ref_no','Ref',r => pad('M-', r.ref_no)],['title','Task'],['customer_id','Customer',r => esc(cname(r.customer_id))],['site','Site / asset',r => (r.site ? '<b>' + esc(r.site) + '</b>' : '') + (r.asset ? (r.site ? ' / ' : '') + esc(r.asset) : '')],
-      ['frequency','Frequency'],['priority','Priority'],['next_due','Next due'],['completed','Completed date',r => r.completed ? shortDate(r.completed) : '<span style="opacity:.5">—</span>'],['mjobs','Jobs',r => mjobs(r),1],['ms','Status',r => gst(mstat(r))],['minv','Invoice',r => minvPill(r)],
+      ['frequency','Frequency'],['priority','Priority'],['received_date','Start date'],['completed','Completion date',r => r.completed ? shortDate(r.completed) : '<span style="opacity:.5">—</span>'],['mjobs','Jobs',r => mjobs(r),1],['ms','Status',r => gst(mstat(r))],['minv','Invoice',r => minvPill(r)],
       ['value','Value',r => money(r.value),1],['est_cost','Total cost',r => money(r.est_cost),1],['mprofit','Profit',r => profit(+r.value || 0, +r.est_cost || 0),1]],
     f: [['customer_id','Customer','cust'],['title','Task / service','text',1],['site','Site / location','text'],['asset','Asset / equipment','text'],
       ['frequency','Frequency','select:Monthly,Weekly,Quarterly,Half-yearly,Yearly,One-time'],['assigned_to','Assigned to','text'],['status','Status','status'],['priority','Priority','select:Low,Normal,High,Urgent'],
-      ['received_date','Received date','date'],['target_date','Target date','date'],['completion_date','Completion date','date'],['next_due','Next due date','date',1],['last_done','Last done','date'],
+      ['received_date','Start date','date'],['completion_date','Completion date','date'],
       ['value','Value per visit (LKR)','number'],['labour_cost','Labour charge (LKR)','number'],['material_cost','Material cost (LKR)','number'],['transport_cost','Transport cost (LKR)','number'],['other_cost','Other expenses (LKR)','number'],
       ['notes','Notes','textarea']]},
   items: {label: 'Items catalog', one: 'item', flt: [],
@@ -1094,13 +1094,13 @@ async function jobCard(id) {
   const sups = su.data || [], invs = iv.data || [], q = qu.data, m = mt.data, sum = (a, k) => a.reduce((t, x) => t + (+x[k] || 0), 0);
   const cost = +j.cost || jcost(j), billed = sum(invs, 'amount'), got = sum(invs, 'paid');
   showCard(`<h2>${pad('J-', j.job_no)} &nbsp;${j.site ? '<b>' + esc(j.site) + '</b> — ' : ''}${esc(j.title)} &nbsp;${pill(j.status)}</h2>`
-    + kv([['Customer', esc(cname(j.customer_id)) || '-'], ['Project', esc(pname(j.project_id)) || '-'], ['Type', esc(j.job_type || 'Direct')], ['Received', esc(j.received_date || '-')], ['Target date', esc(j.target_date || '-')], ['Completed', esc(j.completion_date || '-')],
+    + kv([['Customer', esc(cname(j.customer_id)) || '-'], ['Project', esc(pname(j.project_id)) || '-'], ['Type', esc(j.job_type || 'Direct')], ['Start date', esc(j.received_date || '-')], ['Completion date', esc(j.completion_date || '-')],
       ['Quotation', q ? esc(qn(q)) + ' (' + esc(q.status) + ')' : '-'], ['Maintenance task', m ? pad('M-', m.ref_no) + ' ' + esc(m.title) : '-']])
     + '<h3 class="full">Money</h3>'
     + kv([['Job value', money(j.value)], ['Labour', money(j.labour_cost)], ['Material', money(j.material_cost)], ['Transport', money(j.transport_cost)], ['Other expenses', money(j.other_cost)], ['Supplied items (cost)', money(j.supply_cost)],
       ['Total cost', money(cost)], ['Profit', profit(+j.value, cost)], ['Invoiced', money(billed)], ['Received', money(got)], ['Outstanding', money(billed - got)]])
     + '<h3 class="full">Supplied items</h3>' + tbl(['No','Item','Qty','Cost','Sale value'], sups.map(x => [pad('S-', x.supply_no), esc(x.item), esc(x.quantity + ' ' + (x.unit || '')), money(x.total_cost), money(x.total_price)]))
-    + '<h3 class="full">Invoices</h3>' + tbl(['No','Issued','Due','Amount','Received','Status'], invs.map(x => [esc(inn(x)), esc(x.issue_date || ''), esc(x.due_date || ''), money(x.amount), money(x.paid), `<span class="pill ${invStatus(x)}">${invStatus(x)}</span>`])));
+    + '<h3 class="full">Invoices</h3>' + tbl(['No','Completion date','Amount','Received','Status'], invs.map(x => [esc(inn(x)), esc(x.issue_date || ''), money(x.amount), money(x.paid), `<span class="pill ${invStatus(x)}">${invStatus(x)}</span>`])));
 }
 async function custCard(id) {
   const c = S.rows.find(x => x.id === id); if (!c) return;
@@ -1111,7 +1111,7 @@ async function custCard(id) {
     + kv([['Jobs', jobs.length], ['Open jobs', jobs.filter(j => !done.includes(j.status)).length], ['Quotations', qs.length], ['Invoiced', money(sum(invs, 'amount'))], ['Received', money(sum(invs, 'paid'))], ['Outstanding', money(sum(invs, 'amount') - sum(invs, 'paid'))]])
     + '<h3 class="full">Jobs</h3>' + tbl(['Job','Title','Status','Value'], jobs.map(j => [pad('J-', j.job_no), (j.site ? '<b>' + esc(j.site) + '</b><br>' : '') + esc(j.title), pill(j.status), money(j.value)]))
     + '<h3 class="full">Quotations</h3>' + tbl(['No','Title','Status','Value'], qs.map(x => [esc(qn(x)), esc(x.title), qpill(x.status), money(x.amount)]))
-    + '<h3 class="full">Invoices</h3>' + tbl(['No','Job','Due','Amount','Received','Status'], invs.map(x => [esc(inn(x)), esc(jno(x.job_id)), esc(x.due_date || ''), money(x.amount), money(x.paid), `<span class="pill ${invStatus(x)}">${invStatus(x)}</span>`])));
+    + '<h3 class="full">Invoices</h3>' + tbl(['No','Job','Completion date','Amount','Received','Status'], invs.map(x => [esc(inn(x)), esc(jno(x.job_id)), esc(x.issue_date || ''), money(x.amount), money(x.paid), `<span class="pill ${invStatus(x)}">${invStatus(x)}</span>`])));
 }
 /* ---------- line items editor, conversion, payments, printing ---------- */
 const KINDS = ['Material','Labour','Transport','Other','Expense','Location'];   // 'Location' = a heading row (e.g. Kandy) that groups the lines under it on a printed quotation / invoice; it has no price or cost   // 'Expense' = internal cost only: counted in cost and profit, never shown on quotation / invoice
@@ -1354,7 +1354,7 @@ tr.tk td{background:#fff;color:#073763;font-weight:700;font-size:11.5px;padding:
 <body><table class="lay"><thead><tr><td><img class="hd" src="${S.hdr || DEFAULT_HDR}" alt=""></td></tr></thead>
 <tfoot><tr><td><div class="ft"><span>Tel : ${esc(tel)}</span><span>E mail : ${esc(mail)}</span></div></td></tr></tfoot>
 <tbody><tr><td>
-<div class="top"><div><div class="tt">${inv ? 'Invoice' : 'Quotation'}</div><div class="acc"></div></div><div class="meta"><div><span>${inv ? 'Invoice' : 'Quotation'} Number :</span><b>${esc(no)}</b></div><div><span>Date :</span><b>${longDate(cdate)}</b></div><div><span>${inv ? 'Due Date' : 'Valid Date'} :</span><b>${longDate(second)}</b></div></div></div>
+<div class="top"><div><div class="tt">${inv ? 'Invoice' : 'Quotation'}</div><div class="acc"></div></div><div class="meta"><div><span>${inv ? 'Invoice' : 'Quotation'} Number :</span><b>${esc(no)}</b></div><div><span>${inv ? 'Completion Date' : 'Date'} :</span><b>${longDate(cdate)}</b></div></div></div>
 <div class="bar">Customer Detail</div><div class="cd"><div><b>Company/Customer Name :</b> ${esc(c.name || '')}</div><div><b>Address :</b> ${esc((c.address || '').replace(/\n/g, ', '))}</div><div><b>Contact Person :</b> ${esc(c.contact_person || '')}${c.phone ? ' &nbsp;(' + esc(c.phone) + ')' : ''}</div><div><b>E mail :</b> ${esc(c.email || '')}</div></div>
 <table class="it">${gm ? '<thead><tr><th>W/Performed</th><th style="width:9%">Qty</th><th style="width:16%">Charge (LKR)</th><th style="width:16%">Total (LKR)</th></tr></thead>' : '<thead><tr><th style="width:13%">Job Number</th><th style="width:15%">Location</th><th style="width:11%">Date</th><th>W/Performed</th><th style="width:7%">Qty</th><th style="width:13%">Charge (LKR)</th><th style="width:13%">Total (LKR)</th></tr></thead>'}<tbody>${rows}
 ${disc || Math.abs(tax) > 0.005 ? tr('Subtotal', f2(sub)) : ''}${disc ? tr('Discount', '- ' + f2(disc)) : ''}${Math.abs(tax) > 0.005 ? tr('Tax (' + (+d.tax_rate || 0) + '%)', f2(tax)) : ''}
@@ -1526,7 +1526,7 @@ async function form(row, pre) {
   if (S.view === 'invoices' && preCust) { const jsel = nm('job_id'); jsel.required = false; jsel.options[0].textContent = 'No job (maintenance invoice for ' + (cname(preCust) || 'customer') + ')'; }
   if (S.view === 'invoices') {
     const js = nm('job_id');
-    js.onchange = async () => { if (!row && ed.isEmpty() && js.value) ed.setRows(await jobInvoiceItems(js.value)); };
+    js.onchange = async () => { const jx = S.jobs.find(x => x.id === js.value), idt = nm('issue_date'); if (jx && jx.completion_date && idt) idt.value = String(jx.completion_date).slice(0, 10); if (!row && ed.isEmpty() && js.value) ed.setRows(await jobInvoiceItems(js.value)); };
     const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'btn g s'; pb.style.marginTop = '6px';
     pb.textContent = 'Pull all charges from the job (line by line)';
     pb.onclick = async () => { if (!js.value) return toast('Select a job first');
@@ -1542,6 +1542,14 @@ async function form(row, pre) {
     e.preventDefault();
     const fd = new FormData($('#df')), o = {};
     m.f.forEach(([k,, t]) => { const v = fd.get(k); o[k] = v === '' || v === null ? (t === 'number' && S.view !== 'customers' ? 0 : null) : t === 'number' ? +v : v; });
+    const sd = o.received_date || o.quote_date, cd = o.completion_date;
+    if (sd && cd && cd < sd) return toast('Completion date cannot be earlier than the start date');
+    if (S.view === 'invoices' && o.issue_date) o.due_date = isoLocal(new Date(new Date(o.issue_date + 'T12:00:00').getTime() + (+S.terms || 0) * 864e5));   // hidden: follows the completion date
+    if (S.view === 'maintenance' && (!row || !row.next_due)) {   // hidden: next visit is worked out from the dates and the frequency
+      const nd = new Date((cd || sd || today()) + 'T12:00:00'), mths = {Monthly: 1, Quarterly: 3, 'Half-yearly': 6, Yearly: 12}[o.frequency];
+      if (o.frequency === 'Weekly') nd.setDate(nd.getDate() + 7); else if (mths) nd.setMonth(nd.getMonth() + mths);
+      o.next_due = isoLocal(nd);
+    }
     const jb = S.view === 'invoices' ? S.jobs.find(x => x.id === o.job_id) : null;
     if (S.view === 'invoices') { if (jb) o.customer_id = jb.customer_id; else if (preCust) o.customer_id = preCust; else return toast('Select a job'); }
     if (S.view === 'jobs' && o.job_type !== 'Maintenance') o.maintenance_id = null;
