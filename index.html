@@ -1309,14 +1309,19 @@ async function printDoc(type, id) {
   // Top date of the printed invoice = INVOICE DATE (issue_date, the day the invoice was made). The work COMPLETION date is separate:
   // it comes from the job, or from the maintenance / project tasks listed on the invoice, and prints in the Job / Date column.
   const idate = String(d.issue_date || '').slice(0, 10) || today();
+  const tname = t => t.title + (t.asset ? ' (' + t.asset + ')' : ''), norm = x => String(x || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  // Every task heading in the invoice is tied to ONE maintenance task (each task used once): 1) same name + location, 2) same name, 3) a line starts with the task title, 4) the remaining tasks of this invoice, in print order
+  if (inv && gm) {
+    const pool = (mtasks.length ? mtasks : []).slice().sort((x, y) => String(x.site || '').localeCompare(String(y.site || '')) || x.ref_no - y.ref_no), used = new Set(), all = [];
+    gm.forEach(L => L.tasks.forEach(T => all.push([L, T])));
+    const nameOk = (t, T) => norm(T.name) && (norm(T.name) === norm(tname(t)) || norm(T.name) === norm(t.title));
+    const free = (arr, f) => arr.find(x => !used.has(x.id) && f(x));
+    const take = (T, t) => { if (t) { T.t = t; used.add(t.id); } };
+    all.forEach(([L, T]) => { if (T.name) take(T, free(pool, x => nameOk(x, T) && norm(x.site) === norm(L.name)) || free(pool, x => nameOk(x, T)) || free(mtAll, x => nameOk(x, T) && norm(x.site) === norm(L.name))); });
+    all.forEach(([L, T]) => { if (!T.t) take(T, T.rows.map(r => free(pool, x => norm(r.description).startsWith(norm(x.title)))).find(Boolean) || (T.name ? free(pool, x => norm(T.name).startsWith(norm(x.title))) : null)); });
+    all.forEach(([L, T]) => { if (!T.t && (T.name || T.rows.length)) take(T, free(pool, x => norm(x.site) === norm(L.name)) || free(pool, () => true)); });
+  }
   const tdate = t => String((t && (t.completion_date || mdone(t))) || '').slice(0, 10);
-  const usedT = new Set(), tname = t => t.title + (t.asset ? ' (' + t.asset + ')' : '');
-  const pickT = (T, L) => { const pool = mtasks.length ? mtasks : mtAll, nm = (T.name || '').trim(), ln = ((L && L.name) || '').trim();
-    const ok = t => !usedT.has(t.id) && (nm === tname(t) || nm === t.title);
-    let t = pool.find(x => ok(x) && (x.site || '').trim() === ln) || pool.find(ok);
-    if (!t) { const r = T.rows.map(x => pool.find(y => !usedT.has(y.id) && (x.description || '').startsWith(y.title))).find(Boolean); t = r || null; }
-    if (!t && !nm) { const c = pool.filter(y => !usedT.has(y.id) && (y.site || '').trim() === ln); if (c.length === 1) t = c[0]; }
-    if (t) usedT.add(t.id); return t; };
   const compDates = !inv ? [] : (j ? [j.completion_date] : mtasks.map(t => tdate(t))).filter(Boolean).map(x => String(x).slice(0, 10)).sort();
   const cdate = !inv ? date : (compDates.length ? compDates[compDates.length - 1] : '');
   const loc = (inv ? (j && j.site) || '' : d.site) || '', jdate = inv ? cdate : '', jnum = inv && j ? pad('J-', j.job_no) : '';
@@ -1335,7 +1340,7 @@ async function printDoc(type, id) {
     gm.forEach((L, li) => {
       rows += `<tr class="gb"><td colspan="3"><span class="nb">${String(li + 1).padStart(2, '0')}</span>${esc(L.name || 'General')}</td><td class="r">${f2(L.tasks.reduce((a, T) => a + T.rows.reduce((b, x) => b + x.quantity * x.unit_price, 0), 0))}</td></tr>`;
       L.tasks.forEach(T => {
-        { const td = inv ? tdate(pickT(T, L)) : ''; if (T.name || td) rows += `<tr class="tk"><td colspan="4">${esc(T.name)}${td ? `<span style="float:right;font-weight:400;font-style:italic;color:#5b6b7d">Completed : ${esc(shortDate(td))}</span>` : ''}</td></tr>`; }
+        { const td = inv ? tdate(T.t) : ''; if (T.name || td) rows += `<tr class="tk"><td colspan="4">${esc(T.name)}${td ? `<span style="float:right;font-weight:400;font-style:italic;color:#5b6b7d">Completed : ${esc(shortDate(td))}</span>` : ''}</td></tr>`; }
         let prev = '', i = 0;
         T.rows.forEach(x => { const cat = catL[x.kind] || 'Charges'; if (cat !== prev) { rows += `<tr class="sb"><td colspan="4">${cat}</td></tr>`; prev = cat; i = 0; }
           rows += `<tr class="${i++ % 2 ? 'w' : 'g'}"><td>${br(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; });
