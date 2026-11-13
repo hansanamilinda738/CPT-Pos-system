@@ -353,9 +353,9 @@ const M = {
       ['value','Job value (LKR)','number'],...costF,['notes','Internal notes','textarea']]},
   invoices: {label: 'Invoices', one: 'invoice', flt: ['status','cust','cat'], dt: 'issue_date', vk: 'amount', no: ['Invoice No','invoice_no','INV-'],
     cols: [['invoice_no','Invoice',r => esc(inn(r))],['job_id','Job',r => esc(invJobs(r))],['customer_id','Customer',r => esc(cname(r.customer_id))],
-      ['cat','Category',r => { const c = CATS.find(x => x[0] === invCat(r)); return `<span class="pill" style="background:${c[2]}22;color:${c[2]}">${c[1]}</span>`; }],['issue_date','Completion date'],['amount','Invoice value',r => money(r.amount),1],
+      ['cat','Category',r => { const c = CATS.find(x => x[0] === invCat(r)); return `<span class="pill" style="background:${c[2]}22;color:${c[2]}">${c[1]}</span>`; }],['issue_date','Invoice date'],['amount','Invoice value',r => money(r.amount),1],
       ['paid','Received',r => money(r.paid),1],['s','Status',r => {const s = invStatus(r); return `<span class="pill ${s}">${s}</span>`}]],
-    f: [['job_id','Job (job number)','job',1],['issue_date','Completion date','date'],
+    f: [['job_id','Job (job number)','job',1],['issue_date','Invoice date','date'],
       ['discount','Discount (LKR)','number'],['tax_rate','Tax / VAT (%)','number'],['amount','Invoice total (LKR)','number'],['notes','Notes','textarea']]},
   projects: {label: 'Projects', one: 'project', flt: ['status','cust','priority','inv'], dt: 'received_date', vk: 'value', no: ['Project No','project_no','P-'], get sts() { return S.statuses; },
     cols: [['project_no','Project',r => pad('P-', r.project_no)],['name','Name'],['customer_id','Customer',r => esc(cname(r.customer_id))],['status','Status',r => pill(r.status)],['priority','Priority'],
@@ -1100,7 +1100,7 @@ async function jobCard(id) {
     + kv([['Job value', money(j.value)], ['Labour', money(j.labour_cost)], ['Material', money(j.material_cost)], ['Transport', money(j.transport_cost)], ['Other expenses', money(j.other_cost)], ['Supplied items (cost)', money(j.supply_cost)],
       ['Total cost', money(cost)], ['Profit', profit(+j.value, cost)], ['Invoiced', money(billed)], ['Received', money(got)], ['Outstanding', money(billed - got)]])
     + '<h3 class="full">Supplied items</h3>' + tbl(['No','Item','Qty','Cost','Sale value'], sups.map(x => [pad('S-', x.supply_no), esc(x.item), esc(x.quantity + ' ' + (x.unit || '')), money(x.total_cost), money(x.total_price)]))
-    + '<h3 class="full">Invoices</h3>' + tbl(['No','Completion date','Amount','Received','Status'], invs.map(x => [esc(inn(x)), esc(x.issue_date || ''), money(x.amount), money(x.paid), `<span class="pill ${invStatus(x)}">${invStatus(x)}</span>`])));
+    + '<h3 class="full">Invoices</h3>' + tbl(['No','Invoice date','Amount','Received','Status'], invs.map(x => [esc(inn(x)), esc(x.issue_date || ''), money(x.amount), money(x.paid), `<span class="pill ${invStatus(x)}">${invStatus(x)}</span>`])));
 }
 async function custCard(id) {
   const c = S.rows.find(x => x.id === id); if (!c) return;
@@ -1111,7 +1111,7 @@ async function custCard(id) {
     + kv([['Jobs', jobs.length], ['Open jobs', jobs.filter(j => !done.includes(j.status)).length], ['Quotations', qs.length], ['Invoiced', money(sum(invs, 'amount'))], ['Received', money(sum(invs, 'paid'))], ['Outstanding', money(sum(invs, 'amount') - sum(invs, 'paid'))]])
     + '<h3 class="full">Jobs</h3>' + tbl(['Job','Title','Status','Value'], jobs.map(j => [pad('J-', j.job_no), (j.site ? '<b>' + esc(j.site) + '</b><br>' : '') + esc(j.title), pill(j.status), money(j.value)]))
     + '<h3 class="full">Quotations</h3>' + tbl(['No','Title','Status','Value'], qs.map(x => [esc(qn(x)), esc(x.title), qpill(x.status), money(x.amount)]))
-    + '<h3 class="full">Invoices</h3>' + tbl(['No','Job','Completion date','Amount','Received','Status'], invs.map(x => [esc(inn(x)), esc(jno(x.job_id)), esc(x.issue_date || ''), money(x.amount), money(x.paid), `<span class="pill ${invStatus(x)}">${invStatus(x)}</span>`])));
+    + '<h3 class="full">Invoices</h3>' + tbl(['No','Job','Invoice date','Amount','Received','Status'], invs.map(x => [esc(inn(x)), esc(jno(x.job_id)), esc(x.issue_date || ''), money(x.amount), money(x.paid), `<span class="pill ${invStatus(x)}">${invStatus(x)}</span>`])));
 }
 /* ---------- line items editor, conversion, payments, printing ---------- */
 const KINDS = ['Material','Labour','Transport','Other','Expense','Location'];   // 'Location' = a heading row (e.g. Kandy) that groups the lines under it on a printed quotation / invoice; it has no price or cost   // 'Expense' = internal cost only: counted in cost and profit, never shown on quotation / invoice
@@ -1281,7 +1281,7 @@ async function printDoc(type, id) {
   const gm = (() => {
     if (!hasItems) return null;
     const ord = {Labour: 0, Material: 1, Other: 2, Transport: 3}, locs = [];
-    const task = (L, name, ex) => { let T = !ex && L.tasks.find(x => x.name === name && !x.ex); if (!T) { T = {name, rows: [], ex: !!ex}; L.tasks.push(T); } return T; };
+    const task = (L, name, ex) => { let T = !ex && L.tasks.find(x => x.name === name && !x.ex); if (!T) { T = {name, rows: [], ex: !!ex, t: mtAll.find(t => name === t.title + (t.asset ? ' (' + t.asset + ')' : '') || name === t.title || (name || '').startsWith(t.title))}; L.tasks.push(T); } return T; };
     if (hasLoc) {
       let cur = null, tk = null;
       const need = () => { if (!cur) { cur = {name: '', tasks: []}; locs.push(cur); } return cur; };
@@ -1306,7 +1306,11 @@ async function printDoc(type, id) {
   })();
   // Invoices print the date the work was COMPLETED (job completion date, or the maintenance task's completed date); the issue date is only a fallback.
   // EVERY date on a printed invoice is the invoice's own Completion date (the one in the Invoices tab). Nothing is read from jobs or maintenance tasks here.
-  const cdate = !inv ? date : String(d.issue_date || '').slice(0, 10);
+  // Top date of the printed invoice = INVOICE DATE (issue_date, the day the invoice was made). The work COMPLETION date is separate:
+  // it comes from the job, or from the maintenance / project tasks listed on the invoice, and prints in the Job / Date column.
+  const idate = String(d.issue_date || '').slice(0, 10) || today();
+  const compDates = !inv ? [] : (j ? [j.completion_date] : mtasks.map(t => mdone(t))).filter(Boolean).map(x => String(x).slice(0, 10)).sort();
+  const cdate = !inv ? date : (compDates.length ? compDates[compDates.length - 1] : '');
   const loc = (inv ? (j && j.site) || '' : d.site) || '', jdate = inv ? cdate : '', jnum = inv && j ? pad('J-', j.job_no) : '';
   const tel = S.phone || '+9475 4276105 / +9470 6651029 (Whatsapp)', mail = S.email || 'connectprotechnologies11@gmail.com';
   const pn = S.prepName || 'Kanishka Kumarasinghe', pt = S.prepTitle || 'Executive', an = S.authName || 'Hansana Milinda', at = S.authTitle || 'Owner';
@@ -1323,7 +1327,7 @@ async function printDoc(type, id) {
     gm.forEach((L, li) => {
       rows += `<tr class="gb"><td colspan="3"><span class="nb">${String(li + 1).padStart(2, '0')}</span>${esc(L.name || 'General')}</td><td class="r">${f2(L.tasks.reduce((a, T) => a + T.rows.reduce((b, x) => b + x.quantity * x.unit_price, 0), 0))}</td></tr>`;
       L.tasks.forEach(T => {
-        if (T.name) rows += `<tr class="tk"><td colspan="4">${esc(T.name)}${inv ? `<span style="float:right;font-weight:400;font-style:italic;color:#5b6b7d">Completed : ${esc(shortDate(cdate))}</span>` : ''}</td></tr>`;
+        if (T.name) rows += `<tr class="tk"><td colspan="4">${esc(T.name)}${inv && (T.t ? mdone(T.t) : cdate) ? `<span style="float:right;font-weight:400;font-style:italic;color:#5b6b7d">Completed : ${esc(shortDate(T.t ? mdone(T.t) : cdate))}</span>` : ''}</td></tr>`;
         let prev = '', i = 0;
         T.rows.forEach(x => { const cat = catL[x.kind] || 'Charges'; if (cat !== prev) { rows += `<tr class="sb"><td colspan="4">${cat}</td></tr>`; prev = cat; i = 0; }
           rows += `<tr class="${i++ % 2 ? 'w' : 'g'}"><td>${br(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; });
@@ -1332,7 +1336,7 @@ async function printDoc(type, id) {
   }
   if (!gm) groups.forEach((g, gi) => {
     if (hasItems) { rows += `<tr class="gb">${per ? '<td class="side"></td><td class="side"></td><td class="side"></td>' : first ? side : ''}<td colspan="3"><span class="nb">${String(gi + 1).padStart(2, '0')}</span>${gl[g.k]}</td><td class="r">${f2(g.rows.reduce((a, x) => a + x.quantity * x.unit_price, 0))}</td></tr>`; first = false; }
-    g.rows.forEach((x, i) => { rows += `<tr class="${i % 2 ? 'w' : 'g'}">${per ? `<td class="side"></td><td class="side" style="vertical-align:middle">${br(siteOf(x))}</td><td class="side" style="vertical-align:middle">${esc(shortDate(jdate))}</td>` : first ? side : ''}<td>${br(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; first = false; });
+    g.rows.forEach((x, i) => { rows += `<tr class="${i % 2 ? 'w' : 'g'}">${per ? `<td class="side"></td><td class="side" style="vertical-align:middle">${br(siteOf(x))}</td><td class="side" style="vertical-align:middle">${esc(shortDate((() => { const t = mtasks.find(t => (x.description || '').startsWith(t.title)); return (t && mdone(t)) || jdate; })()))}</td>` : first ? side : ''}<td>${br(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; first = false; });
   });
   const tr = (label, val) => `<tr class="sm"><td colspan="${gm ? 3 : 6}" class="r">${label}</td><td class="r">${val}</td></tr>`;
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(no)}</title><style>
@@ -1351,7 +1355,7 @@ tr.tk td{background:#fff;color:#073763;font-weight:700;font-size:11.5px;padding:
 <body><table class="lay"><thead><tr><td><img class="hd" src="${S.hdr || DEFAULT_HDR}" alt=""></td></tr></thead>
 <tfoot><tr><td><div class="ft"><span>Tel : ${esc(tel)}</span><span>E mail : ${esc(mail)}</span></div></td></tr></tfoot>
 <tbody><tr><td>
-<div class="top"><div><div class="tt">${inv ? 'Invoice' : 'Quotation'}</div><div class="acc"></div></div><div class="meta"><div><span>${inv ? 'Invoice' : 'Quotation'} Number :</span><b>${esc(no)}</b></div><div><span>${inv ? 'Completion Date' : 'Date'} :</span><b>${longDate(cdate)}</b></div></div></div>
+<div class="top"><div><div class="tt">${inv ? 'Invoice' : 'Quotation'}</div><div class="acc"></div></div><div class="meta"><div><span>${inv ? 'Invoice' : 'Quotation'} Number :</span><b>${esc(no)}</b></div><div><span>${inv ? 'Invoice Date' : 'Date'} :</span><b>${longDate(inv ? idate : cdate)}</b></div>${inv && cdate ? `<div><span>Completion Date :</span><b>${longDate(cdate)}</b></div>` : ''}</div></div>
 <div class="bar">Customer Detail</div><div class="cd"><div><b>Company/Customer Name :</b> ${esc(c.name || '')}</div><div><b>Address :</b> ${esc((c.address || '').replace(/\n/g, ', '))}</div><div><b>Contact Person :</b> ${esc(c.contact_person || '')}${c.phone ? ' &nbsp;(' + esc(c.phone) + ')' : ''}</div><div><b>E mail :</b> ${esc(c.email || '')}</div></div>
 <table class="it">${gm ? '<thead><tr><th>W/Performed</th><th style="width:9%">Qty</th><th style="width:16%">Charge (LKR)</th><th style="width:16%">Total (LKR)</th></tr></thead>' : '<thead><tr><th style="width:13%">Job Number</th><th style="width:15%">Location</th><th style="width:11%">Date</th><th>W/Performed</th><th style="width:7%">Qty</th><th style="width:13%">Charge (LKR)</th><th style="width:13%">Total (LKR)</th></tr></thead>'}<tbody>${rows}
 ${disc || Math.abs(tax) > 0.005 ? tr('Subtotal', f2(sub)) : ''}${disc ? tr('Discount', '- ' + f2(disc)) : ''}${Math.abs(tax) > 0.005 ? tr('Tax (' + (+d.tax_rate || 0) + '%)', f2(tax)) : ''}
@@ -1411,7 +1415,7 @@ async function maintDoc(ids, what) {
   const {data: lis} = await sb.from('line_items').select('*').eq('parent_type', 'maintenance').in('parent_id', ts.map(t => t.id)).order('sort');
   const items = buildMaintItems(ts, lis), notes = 'Maintenance: ' + ts.map(t => pad('M-', t.ref_no)).join(', ');
   S.msel = {}; go(what === 'invoice' ? 'invoices' : 'quotations');
-  form(null, what === 'invoice' ? {customer_id: custs[0], items, notes, issue_date: ts.map(mdone).filter(Boolean).sort().pop() || today()} : {customer_id: custs[0], title: 'Maintenance quotation', items, notes});
+  form(null, what === 'invoice' ? {customer_id: custs[0], items, notes, issue_date: today()} : {customer_id: custs[0], title: 'Maintenance quotation', items, notes});
 }
 const maintInvoice = ids => maintDoc(ids, 'invoice'), maintQuotation = ids => maintDoc(ids, 'quotation');
 async function completeJob(id) {
@@ -1523,8 +1527,8 @@ async function form(row, pre) {
   if (S.view === 'invoices' && preCust) { const jsel = nm('job_id'); jsel.required = false; jsel.options[0].textContent = 'No job (maintenance invoice for ' + (cname(preCust) || 'customer') + ')'; }
   if (S.view === 'invoices') {
     const js = nm('job_id');
-    if (!row && js.value) { const j0 = S.jobs.find(x => x.id === js.value), d0 = nm('issue_date'); if (j0 && j0.completion_date && d0 && !(pre && pre.issue_date)) d0.value = String(j0.completion_date).slice(0, 10); }
-    js.onchange = async () => { const jx = S.jobs.find(x => x.id === js.value), idt = nm('issue_date'); if (jx && jx.completion_date && idt) idt.value = String(jx.completion_date).slice(0, 10); if (!row && ed.isEmpty() && js.value) ed.setRows(await jobInvoiceItems(js.value)); };
+    { const d0 = nm('issue_date'); if (!row && d0 && !d0.value) d0.value = today(); }   // invoice date = the day the invoice is made
+    js.onchange = async () => { if (!row && ed.isEmpty() && js.value) ed.setRows(await jobInvoiceItems(js.value)); };
     const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'btn g s'; pb.style.marginTop = '6px';
     pb.textContent = 'Pull all charges from the job (line by line)';
     pb.onclick = async () => { if (!js.value) return toast('Select a job first');
@@ -1542,7 +1546,7 @@ async function form(row, pre) {
     m.f.forEach(([k,, t]) => { const v = fd.get(k); o[k] = v === '' || v === null ? (t === 'number' && S.view !== 'customers' ? 0 : null) : t === 'number' ? +v : v; });
     const sd = o.received_date || o.quote_date, cd = o.completion_date;
     if (sd && cd && cd < sd) return toast('Completion date cannot be earlier than the start date');
-    if (S.view === 'invoices' && o.issue_date) o.due_date = isoLocal(new Date(new Date(o.issue_date + 'T12:00:00').getTime() + (+S.terms || 0) * 864e5));   // hidden: follows the completion date
+    if (S.view === 'invoices' && o.issue_date) o.due_date = isoLocal(new Date(new Date(o.issue_date + 'T12:00:00').getTime() + (+S.terms || 0) * 864e5));   // hidden: invoice date + payment terms
     if (S.view === 'maintenance' && (!row || !row.next_due)) {   // hidden: next visit is worked out from the dates and the frequency
       const nd = new Date((cd || sd || today()) + 'T12:00:00'), mths = {Monthly: 1, Quarterly: 3, 'Half-yearly': 6, Yearly: 12}[o.frequency];
       if (o.frequency === 'Weekly') nd.setDate(nd.getDate() + 7); else if (mths) nd.setMonth(nd.getMonth() + mths);
