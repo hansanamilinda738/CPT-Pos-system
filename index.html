@@ -1305,11 +1305,8 @@ async function printDoc(type, id) {
     return locs.length ? locs : null;
   })();
   // Invoices print the date the work was COMPLETED (job completion date, or the maintenance task's completed date); the issue date is only a fallback.
-  const tkName = t => t.title + (t.asset ? ' (' + t.asset + ')' : '');
-  const doneOfTask = nm => { const t = mtAll.find(t => nm === tkName(t) || nm === t.title); return t ? mdone(t) : ''; };
-  const dateOfLine = x => { const t = mtasks.find(t => (x.description || '').startsWith(t.title)); return t ? mdone(t) : ''; };
-  const cdate = !inv ? date : (d.issue_date ? String(d.issue_date).slice(0, 10) : '') || (j && j.completion_date ? String(j.completion_date).slice(0, 10) : '')
-    || [...(gm ? gm.flatMap(L => L.tasks.map(T => doneOfTask(T.name))) : []), ...mtasks.map(mdone), ...(j && j.maintenance_id ? [mdone(S.maint.find(x => x.id === j.maintenance_id) || {})] : [])].filter(Boolean).sort().pop() || d.issue_date || '';
+  // EVERY date on a printed invoice is the invoice's own Completion date (the one in the Invoices tab). Nothing is read from jobs or maintenance tasks here.
+  const cdate = !inv ? date : String(d.issue_date || '').slice(0, 10);
   const loc = (inv ? (j && j.site) || '' : d.site) || '', jdate = inv ? cdate : '', jnum = inv && j ? pad('J-', j.job_no) : '';
   const tel = S.phone || '+9475 4276105 / +9470 6651029 (Whatsapp)', mail = S.email || 'connectprotechnologies11@gmail.com';
   const pn = S.prepName || 'Kanishka Kumarasinghe', pt = S.prepTitle || 'Executive', an = S.authName || 'Hansana Milinda', at = S.authTitle || 'Owner';
@@ -1326,7 +1323,7 @@ async function printDoc(type, id) {
     gm.forEach((L, li) => {
       rows += `<tr class="gb"><td colspan="3"><span class="nb">${String(li + 1).padStart(2, '0')}</span>${esc(L.name || 'General')}</td><td class="r">${f2(L.tasks.reduce((a, T) => a + T.rows.reduce((b, x) => b + x.quantity * x.unit_price, 0), 0))}</td></tr>`;
       L.tasks.forEach(T => {
-        if (T.name) rows += `<tr class="tk"><td colspan="4">${esc(T.name)}${inv ? `<span style="float:right;font-weight:400;font-style:italic;color:#5b6b7d">Completed : ${esc(shortDate(doneOfTask(T.name) || cdate))}</span>` : ''}</td></tr>`;
+        if (T.name) rows += `<tr class="tk"><td colspan="4">${esc(T.name)}${inv ? `<span style="float:right;font-weight:400;font-style:italic;color:#5b6b7d">Completed : ${esc(shortDate(cdate))}</span>` : ''}</td></tr>`;
         let prev = '', i = 0;
         T.rows.forEach(x => { const cat = catL[x.kind] || 'Charges'; if (cat !== prev) { rows += `<tr class="sb"><td colspan="4">${cat}</td></tr>`; prev = cat; i = 0; }
           rows += `<tr class="${i++ % 2 ? 'w' : 'g'}"><td>${br(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; });
@@ -1335,7 +1332,7 @@ async function printDoc(type, id) {
   }
   if (!gm) groups.forEach((g, gi) => {
     if (hasItems) { rows += `<tr class="gb">${per ? '<td class="side"></td><td class="side"></td><td class="side"></td>' : first ? side : ''}<td colspan="3"><span class="nb">${String(gi + 1).padStart(2, '0')}</span>${gl[g.k]}</td><td class="r">${f2(g.rows.reduce((a, x) => a + x.quantity * x.unit_price, 0))}</td></tr>`; first = false; }
-    g.rows.forEach((x, i) => { rows += `<tr class="${i % 2 ? 'w' : 'g'}">${per ? `<td class="side"></td><td class="side" style="vertical-align:middle">${br(siteOf(x))}</td><td class="side" style="vertical-align:middle">${esc(shortDate((inv && dateOfLine(x)) || jdate))}</td>` : first ? side : ''}<td>${br(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; first = false; });
+    g.rows.forEach((x, i) => { rows += `<tr class="${i % 2 ? 'w' : 'g'}">${per ? `<td class="side"></td><td class="side" style="vertical-align:middle">${br(siteOf(x))}</td><td class="side" style="vertical-align:middle">${esc(shortDate(jdate))}</td>` : first ? side : ''}<td>${br(x.description)}</td><td class="c">${qty(x)}</td><td class="r">${f2(x.unit_price)}</td><td class="r">${f2(x.quantity * x.unit_price)}</td></tr>`; first = false; });
   });
   const tr = (label, val) => `<tr class="sm"><td colspan="${gm ? 3 : 6}" class="r">${label}</td><td class="r">${val}</td></tr>`;
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(no)}</title><style>
