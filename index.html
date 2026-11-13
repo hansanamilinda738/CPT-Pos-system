@@ -683,9 +683,9 @@ async function dash() {
 async function list() {
   const m = M[S.view];
   $('#main').innerHTML = `<div class="ph"><div class="hh"><span class="hi">${ic({items:'box',customers:'users',quotations:'quote',jobs:'job',invoices:'file',projects:'folder',maintenance:'wrench',supplies:'box'}[S.view], 22)}</span><div><h1>${m.label}</h1><div class="sum" id="sub"></div></div></div>
-    <div class="acts"><button class="btn g" id="tp">${ic('dl', 16)} Excel template</button><button class="btn g" id="im">${ic('up', 16)} Import Excel</button><button class="btn g" id="ex">${ic('dl', 16)} Export Excel</button><input type="file" id="xf" accept=".xlsx,.xls,.csv" class="hide">${S.view === 'jobs' ? `<button class="btn g" id="addm">${ic('wrench', 16)} New maintenance job</button>` : ''}<button class="btn" id="add">${ic('plus', 16)} Add ${m.one}</button></div></div>
+    <div class="acts"><button class="btn g" id="tp">${ic('dl', 16)} Excel template</button><button class="btn g" id="im">${ic('up', 16)} Import Excel</button><button class="btn g" id="ex">${ic('dl', 16)} Export Excel</button><input type="file" id="xf" accept=".xlsx,.xls,.csv" class="hide">${S.view === 'invoices' ? `<button class="btn g" id="addmp">${ic('cash', 16)} Receive payment (many invoices)</button>` : ''}${S.view === 'jobs' ? `<button class="btn g" id="addm">${ic('wrench', 16)} New maintenance job</button>` : ''}<button class="btn" id="add">${ic('plus', 16)} Add ${m.one}</button></div></div>
     <div class="card fl" id="fl"></div><div class="card tw" id="tb" style="padding:8px 18px"><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div></div><div class="pg" id="pg"></div>`;
-  $('#add').onclick = () => form(); if ($('#addm')) $('#addm').onclick = () => form(null, {job_type: 'Maintenance'}); $('#ex').onclick = exportXlsx; $('#tp').onclick = template; $('#im').onclick = () => $('#xf').click();
+  $('#add').onclick = () => form(); if ($('#addmp')) $('#addmp').onclick = () => multiPayDialog(); if ($('#addm')) $('#addm').onclick = () => form(null, {job_type: 'Maintenance'}); $('#ex').onclick = exportXlsx; $('#tp').onclick = template; $('#im').onclick = () => $('#xf').click();
   $('#xf').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) importXlsx(f); };
   filterUI();
   const {data, error} = await sb.from(S.view).select('*').is('deleted_at', null).order('created_at', {ascending: false});
@@ -1257,6 +1257,42 @@ async function payDialog(id) {
     const {error: e3} = await sb.from('payments').update({deleted_at: new Date().toISOString()}).eq('id', b.dataset.dp);
     if (e3) return toast('Delete failed: ' + e3.message); refresh();
   });
+}
+/* one payment from a customer that covers SEVERAL invoices: split it across the invoices (oldest first, editable); one payment row is saved per invoice */
+const allocFIFO = (total, bals) => { let rem = Math.round((+total || 0) * 100) / 100; return bals.map(b => { const a = Math.max(0, Math.min(rem, b)); rem = Math.round((rem - a) * 100) / 100; return a; }); };
+async function multiPayDialog() {
+  const open = (S.invs || []).filter(i => (+i.amount || 0) - (+i.paid || 0) > 0.005);
+  const cids = [...new Set(open.map(i => String(i.customer_id)))];
+  if (!cids.length) return toast('No outstanding invoices');
+  showCard(`<h2>Receive a payment for several invoices</h2><div class="fld full"><label>Customer</label><select id="mpc">${cids.map(c => `<option value="${c}">${esc(cname(c) || 'No customer')} (${open.filter(i => String(i.customer_id) === c).length} unpaid)</option>`).join('')}</select></div><div id="mpb" class="full"></div>`);
+  const draw = () => {
+    const cid = $('#mpc').value, invs = open.filter(i => String(i.customer_id) === cid).sort((a, b) => String(a.issue_date || '').localeCompare(String(b.issue_date || '')) || (a.invoice_no || 0) - (b.invoice_no || 0));
+    const bal = i => Math.round(((+i.amount || 0) - (+i.paid || 0)) * 100) / 100, totalDue = invs.reduce((a, i) => a + bal(i), 0);
+    $('#mpb').innerHTML = `<div class="fld"><label>Date</label><input type="date" id="mpd" value="${today()}"></div><div class="fld"><label>Total amount received (${esc(S.cur)})</label><input type="number" id="mpt" step="0.01" min="0" placeholder="Total due ${totalDue.toFixed(2)}"></div>`
+      + `<div class="fld"><label>Method</label><select id="mpm">${['Cash','Bank transfer','Cheque','Card','Online'].map(x => `<option>${x}</option>`).join('')}</select></div><div class="fld"><label>Reference / cheque no.</label><input id="mpr"></div>`
+      + `<h3 class="full">Split across invoices (oldest first, you can change any amount)</h3>`
+      + tbl(['Invoice','Date','Total','Received','Balance','Pay now',''], invs.map(i => [esc(inn(i)), esc(String(i.issue_date || '').slice(0, 10)), money(i.amount), money(i.paid), money(bal(i)), `<input type="number" class="mpa" step="0.01" min="0" max="${bal(i)}" data-id="${i.id}" data-bal="${bal(i)}" style="width:110px">`, `<button type="button" class="btn g s" data-mf="${i.id}">Full</button>`]))
+      + `<div class="full" id="mps" style="margin:8px 0;font-weight:600"></div><div class="full"><button type="button" class="btn" id="mpsave">${ic('check', 16)} Record payment</button> <button type="button" class="btn g" id="mpclr">Clear</button></div>`;
+    const inputs = () => [...document.querySelectorAll('.mpa')], sum = () => inputs().reduce((a, x) => a + (+x.value || 0), 0);
+    const upd = () => { const a = sum(), t = +$('#mpt').value || 0, d = Math.round((t - a) * 100) / 100; $('#mps').innerHTML = `Allocated ${f2(a)}` + (t ? ` of ${f2(t)} received` + (d > 0.004 ? ` &nbsp;<span style="color:#b91c1c">${f2(d)} not allocated</span>` : d < -0.004 ? ` &nbsp;<span style="color:#b91c1c">${f2(-d)} over-allocated</span>` : ' &nbsp;<span style="color:#047857">fully allocated</span>') : ''); };
+    $('#mpt').oninput = () => { const al = allocFIFO($('#mpt').value, inputs().map(x => +x.dataset.bal)); inputs().forEach((x, k) => x.value = al[k] > 0 ? al[k].toFixed(2) : ''); upd(); };
+    inputs().forEach(x => x.oninput = upd);
+    document.querySelectorAll('[data-mf]').forEach(b => b.onclick = () => { const x = inputs().find(y => y.dataset.id === b.dataset.mf); x.value = (+x.dataset.bal).toFixed(2); if (!+$('#mpt').value || +$('#mpt').value < sum()) $('#mpt').value = sum().toFixed(2); upd(); });
+    $('#mpclr').onclick = () => { $('#mpt').value = ''; inputs().forEach(x => x.value = ''); upd(); };
+    $('#mpsave').onclick = async () => {
+      const rows = inputs().map(x => ({id: x.dataset.id, a: Math.round((+x.value || 0) * 100) / 100, b: +x.dataset.bal})).filter(r => r.a > 0), a = rows.reduce((t, r) => t + r.a, 0), t = +$('#mpt').value || 0;
+      if (!rows.length) return toast('Enter the amount received');
+      if (rows.some(r => r.a > r.b + 0.005)) return toast('An invoice amount is more than its balance');
+      if (t && Math.abs(t - a) > 0.005 && !confirm('You received ' + f2(t) + ' but allocated ' + f2(a) + '. Record only the allocated ' + f2(a) + '?')) return;
+      const ref = $('#mpr').value.trim() || null, note = 'Combined payment ' + f2(t || a) + ' for ' + rows.length + ' invoice' + (rows.length === 1 ? '' : 's');
+      const {error} = await sb.from('payments').insert(rows.map(r => ({invoice_id: r.id, pay_date: $('#mpd').value || today(), amount: r.a, method: $('#mpm').value, reference: ref, notes: note})));
+      if (error) return toast('Save failed: ' + error.message);
+      if (rows.every(r => r.a >= r.b - 0.005)) confetti(); toast('Payment recorded for ' + rows.length + ' invoice' + (rows.length === 1 ? '' : 's'));
+      $('#dlg').close && $('#dlg').close(); await reload(); await list();
+    };
+    upd();
+  };
+  $('#mpc').onchange = draw; draw();
 }
 const longDate = d => { if (!d) return ''; const x = String(d).slice(0, 10).split('-'); return x.length === 3 ? x[0] + '-' + x[1] + '-' + x[2] : String(d); };   // Year-Month-Day
 const f2 = n => Number(n || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
