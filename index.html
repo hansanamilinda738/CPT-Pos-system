@@ -1309,7 +1309,6 @@ async function printDoc(type, id) {
   // Top date of the printed invoice = INVOICE DATE (issue_date, the day the invoice was made). The work COMPLETION date is separate:
   // it comes from the job, or from the maintenance / project tasks listed on the invoice, and prints in the Job / Date column.
   const idate = String(d.issue_date || '').slice(0, 10) || today();
-  const compDates = !inv ? [] : (j ? [j.completion_date] : mtasks.map(t => tdate(t))).filter(Boolean).map(x => String(x).slice(0, 10)).sort();
   const tdate = t => String((t && (t.completion_date || mdone(t))) || '').slice(0, 10);
   const usedT = new Set(), tname = t => t.title + (t.asset ? ' (' + t.asset + ')' : '');
   const pickT = (T, L) => { const pool = mtasks.length ? mtasks : mtAll, nm = (T.name || '').trim(), ln = ((L && L.name) || '').trim();
@@ -1318,6 +1317,7 @@ async function printDoc(type, id) {
     if (!t) { const r = T.rows.map(x => pool.find(y => !usedT.has(y.id) && (x.description || '').startsWith(y.title))).find(Boolean); t = r || null; }
     if (!t && !nm) { const c = pool.filter(y => !usedT.has(y.id) && (y.site || '').trim() === ln); if (c.length === 1) t = c[0]; }
     if (t) usedT.add(t.id); return t; };
+  const compDates = !inv ? [] : (j ? [j.completion_date] : mtasks.map(t => tdate(t))).filter(Boolean).map(x => String(x).slice(0, 10)).sort();
   const cdate = !inv ? date : (compDates.length ? compDates[compDates.length - 1] : '');
   const loc = (inv ? (j && j.site) || '' : d.site) || '', jdate = inv ? cdate : '', jnum = inv && j ? pad('J-', j.job_no) : '';
   const tel = S.phone || '+9475 4276105 / +9470 6651029 (Whatsapp)', mail = S.email || 'connectprotechnologies11@gmail.com';
